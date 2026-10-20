@@ -1,0 +1,43 @@
+name: release
+
+on:
+  workflow_run:
+    workflows: ['tests']
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Install dependencies
+        run: npm clean-install
+      # semantic-release bumps package.json, which is the Zapier version, then pushes it to Zapier.
+      # The pushed version stays unpromoted: moving users to it is done by hand with `zapier-platform promote`.
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ZAPIER_DEPLOY_KEY: ${{ secrets.ZAPIER_DEPLOY_KEY }}
+        run: npx semantic-release
+
+  skip-release:
+    if: github.event.workflow_run.conclusion != 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip release
+        run: |
+          echo "::warning::Release skipped because the tests workflow did not succeed (${{ github.event.workflow_run.conclusion }})"

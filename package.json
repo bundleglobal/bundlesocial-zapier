@@ -1,0 +1,46 @@
+{
+	"name": "bundlesocial-zapier",
+	"version": "0.1.0",
+	"description": "Zapier integration for bundle.social: schedule posts, manage uploads, comments, DMs, automations and analytics across 15 social networks. Unlimited social accounts.",
+	"private": true,
+	"license": "MIT",
+	"main": "index.js",
+	"homepage": "https://bundle.social",
+	"author": {
+		"name": "bundle.global",
+		"email": "contact@bundle.global"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/bundleglobal/bundlesocial-zapier.git"
+	},
+	"bugs": {
+		"url": "https://github.com/bundleglobal/bundlesocial-zapier/issues"
+	},
+	"scripts": {
+		"fetch-openapi": "curl -fsSL https://api.bundle.social/swagger-json -o openapi/bundlesocial.openapi.json",
+		"generate": "node scripts/generate.mjs",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"validate": "zapier-platform validate",
+		"push": "zapier-platform push"
+	},
+	"engines": {
+		"node": ">=18.20"
+	},
+	"dependencies": {
+		"zapier-platform-core": "19.2.1"
+	},
+	"devDependencies": {
+		"@semantic-release/changelog": "^6.0.3",
+		"@semantic-release/exec": "^7.1.0",
+		"@semantic-release/git": "^10.0.1",
+		"nock": "13.5.6",
+		"semantic-release": "^25.0.2",
+		"vitest": "^2.0.5",
+		"zapier-platform-cli": "19.2.1"
+	},
+	"overrides": {
+		"form-data": "4.0.6"
+	}
+}

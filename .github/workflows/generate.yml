@@ -1,0 +1,40 @@
+name: generate
+on:
+  workflow_dispatch:
+  # Daily catch-up with the live API; a PR is opened only when the spec changed.
+  schedule:
+    - cron: '0 6 * * *'
+  repository_dispatch:
+    types: [generate]
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Install packages
+        run: npm clean-install
+      - name: Fetch OpenAPI spec
+        run: npm run fetch-openapi
+      - name: Generate actions
+        run: npm run generate
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # One PR is kept up to date on the same branch, so the title carries no date.
+          commit-message: "feat: regenerate from the bundle.social API"
+          title: "feat: regenerate from the bundle.social API"
+          body: Regenerated from https://api.bundle.social/swagger-json.
+          branch: generate-zapier
+          base: main
+          labels: generate-zapier
+          delete-branch: true

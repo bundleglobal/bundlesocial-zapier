@@ -1,0 +1,25 @@
+name: tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Install packages
+        run: npm clean-install
+      # Generated files must match the generator: a hand edit would be lost on the next run.
+      - name: Check generated files are up to date
+        run: |
+          npm run generate
+          git diff --exit-code -- generated README.md
+      - name: Test
+        run: npm run test
