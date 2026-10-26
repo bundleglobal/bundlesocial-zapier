@@ -1,6 +1,6 @@
 {
 	"name": "bundlesocial-zapier",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Zapier integration for bundle.social: schedule posts, manage uploads, comments, DMs, automations and analytics across 15 social networks. Unlimited social accounts.",
 	"private": true,
 	"license": "MIT",
