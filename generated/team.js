@@ -67,12 +67,10 @@ module.exports = [
 		sample: {
 			id: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
 			name: 'Sample name',
-			avatarUrl: 'https://example.com/image.jpg',
 			organizationId: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
 			createdById: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
 			createdAt: '2026-01-15T10:00:00.000Z',
 			updatedAt: '2026-01-15T10:00:00.000Z',
-			deletedAt: '2026-01-15T10:00:00.000Z',
 		},
 	},
 	{
@@ -106,12 +104,10 @@ module.exports = [
 		sample: {
 			id: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
 			name: 'Sample name',
-			avatarUrl: 'https://example.com/image.jpg',
 			organizationId: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
 			createdById: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
 			createdAt: '2026-01-15T10:00:00.000Z',
 			updatedAt: '2026-01-15T10:00:00.000Z',
-			deletedAt: '2026-01-15T10:00:00.000Z',
 		},
 	},
 ];

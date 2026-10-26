@@ -605,14 +605,25 @@ function sampleOf(schema, key = '', depth = 0) {
 			const item = sampleOf(schema.items, singular(key), depth + 1);
 			return item === null ? [] : [item];
 		}
-		case 'object':
+		case 'object': {
 			if (!hasProperties(schema) || depth >= SAMPLE_DEPTH) return {};
-			return Object.fromEntries(
-				Object.entries(schema.properties).map(([k, v]) => [k, sampleOf(v, k, depth + 1)]),
-			);
+			// Zapier requires the sample keys to be a subset of every live result, so optional keys,
+			// per-platform entries (only the post's platforms come back) and lists that may be empty are left out.
+			const required = schema.required ? new Set(schema.required) : null;
+			const entries = Object.entries(schema.properties)
+				.filter(([k]) => (!required || required.has(k)) && !(k in BRANDS))
+				.map(([k, v]) => [k, sampleOf(v, k, depth + 1)])
+				.filter(([k, v]) => (depth === 0 && k === 'items') || !isEmptySample(v));
+			return Object.fromEntries(entries);
+		}
 		default:
 			return null;
 	}
+}
+
+function isEmptySample(value) {
+	if (Array.isArray(value)) return value.length === 0 || isPlainObject(value[0]);
+	return isPlainObject(value) && Object.keys(value).length === 0;
 }
 
 // Mirrors how lib/run.js turns a response into a Zapier result.
