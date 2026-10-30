@@ -1,7 +1,8 @@
 name: tests
 on:
+  # Branches of this repo are tested on push. The generated PR is a bot PR, which GitHub holds for
+  # approval on pull_request, so generate.yml dispatches the tests for it instead.
   push:
-  pull_request:
   workflow_dispatch:
 
 jobs:

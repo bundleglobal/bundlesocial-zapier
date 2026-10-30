@@ -102,7 +102,7 @@ bash scripts/smoke-test.sh     # every trigger and action against the real API (
 
 The runtime lives in `lib/`: `operations.js` turns the generated descriptors into Zapier actions, `run.js` builds and sends the requests, `convert.js` parses mapped values back into JSON. Triggers are written by hand in `triggers/`. The tests in `test/` validate the app definition with the same schema Zapier uses and assert the requests each action sends.
 
-Every day the `generate` workflow fetches the spec, regenerates the actions and opens a pull request when it changed. Releases are made by semantic-release from the commit messages on `main` (`feat:` for a minor version, `fix:` for a patch) and pushed to Zapier with `zapier-platform push`, using the `ZAPIER_DEPLOY_KEY` repository secret.
+The `generate` workflow is run by hand from the Actions tab. It fetches the spec, regenerates the actions and opens a pull request when it changed; its `title` input becomes the commit title and so the release note. Releases are made by semantic-release from the commit messages on `main` (`feat:` for a minor version, `fix:` for a patch) and pushed to Zapier with `zapier-platform push`, using the `ZAPIER_DEPLOY_KEY` repository secret.
 
 ## Compatibility
 
