@@ -14,5 +14,5 @@ module.exports = {
 	],
 	test: (z, bundle) => apiRequest(z, bundle, 'GET', '/api/v1/organization/'),
 	// Receives the organization returned by `test`.
-	connectionLabel: (z, bundle) => bundle.inputData.name || 'bundle.social',
+	connectionLabel: (z, bundle) => bundle.inputData.name || 'Organization',
 };
