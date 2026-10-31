@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.0.1...v1.0.2) (2026-10-31)
+
+
+### Bug Fixes
+
+* use generic fallback in connection label ([700caff](https://github.com/bundleglobal/bundlesocial-zapier/commit/700caffa0140ea6be60474119b17b3f8fe566ebf))
+
 ## [1.0.1](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.0.0...v1.0.1) (2026-10-26)
 
 
