@@ -20,30 +20,101 @@ const DEFAULT_LIMIT = '50';
 // Zapier schema limits.
 const MAX_LABEL = 64;
 const MAX_HELP_TEXT = 1000;
-// Operations the integration exposes as Zapier actions: the publishing workflow from team setup to analytics.
+// Operations the integration exposes as Zapier actions: the publishing workflow from team setup to analytics,
+// plus organization, team, social account and upload management.
 const PUBLISHED_OPERATIONS = new Set([
+	'organization.getOrganization',
+	'organization.getPostsUsage',
+	'organization.getCommentsUsage',
+	'organization.getUploadsUsage',
+	'organization.getDailyLimitsUsage',
+	'organization.getImportsUsage',
 	'team.createTeam',
+	'team.getTeam',
+	'team.getList',
+	'team.updateTeam',
 	'team.deleteTeam',
 	'socialAccount.connect',
 	'socialAccount.disconnect',
+	'socialAccount.getByType',
+	'socialAccount.setChannel',
+	'socialAccount.unsetChannel',
+	'socialAccount.refreshChannels',
+	'socialAccount.profileRefresh',
+	'socialAccount.connectionCheck',
+	'socialAccount.createPortalLink',
+	'socialAccount.copy',
+	'socialAccount.enableMessaging',
+	'socialAccount.disableMessaging',
+	'socialAccount.getAccountsToDelete',
 	'post.create',
 	'post.delete',
 	'upload.create',
 	'upload.createFromUrl',
+	'upload.get',
+	'upload.getList',
+	'upload.delete',
+	'upload.deleteMany',
+	'upload.initLargeUpload',
+	'upload.finalizeLargeUpload',
+	'upload.initMultipartUpload',
+	'upload.signMultipartParts',
+	'upload.completeMultipartUpload',
+	'upload.abortMultipartUpload',
 	'analytics.getPostAnalytics',
 	'analytics.getSocialAccountAnalytics',
 ]);
 // Action descriptions in the style Zapier's review asks for; the spec's own read as API notes.
 const ACTION_DESCRIPTIONS = {
+	'organization.getOrganization': 'Retrieves your bundle.social organization with its plan details.',
+	'organization.getPostsUsage': 'Retrieves how many posts your organization has used against its plan limit this billing period.',
+	'organization.getCommentsUsage':
+		'Retrieves how many comments your organization has used against its plan limit this billing period.',
+	'organization.getUploadsUsage':
+		'Retrieves how much upload capacity your organization has used against its plan limit this billing period.',
+	'organization.getDailyLimitsUsage':
+		"Retrieves how many posts a social account has published on a given day against the network's daily cap.",
+	'organization.getImportsUsage': 'Retrieves the post history import usage of each social account, by team or platform.',
 	'team.createTeam': 'Creates a new team in your bundle.social organization.',
+	'team.getTeam': 'Finds a team by ID, with its connected social accounts and settings.',
+	'team.updateTeam': "Updates a team's name or avatar. Fields left empty keep their current value.",
 	'team.deleteTeam': 'Permanently deletes a team along with its connected social accounts, posts and uploads.',
 	'socialAccount.connect':
 		'Generates the link that connects a social account to a team. Open the returned URL to sign in to the network and finish connecting.',
 	'socialAccount.disconnect': 'Disconnects a social account from a team and removes it from all scheduled posts.',
+	'socialAccount.getByType': "Retrieves the team's connected social account on the selected network.",
+	'socialAccount.setChannel':
+		'Selects the page, channel or organization a YouTube, Instagram, Facebook or LinkedIn account posts to.',
+	'socialAccount.unsetChannel':
+		'Clears the selected page, channel or organization of a social account, keeping its authorization.',
+	'socialAccount.refreshChannels':
+		'Reloads the channels available to a Reddit, Discord, Slack or Pinterest account from the network.',
+	'socialAccount.profileRefresh': 'Updates the profile name, handle and avatar of a social account from the network.',
+	'socialAccount.connectionCheck':
+		'Checks right away whether a social account is still authorized, so an expired connection shows up before a post fails.',
+	'socialAccount.createPortalLink':
+		'Generates a hosted portal link where your users connect and manage the social accounts of a team themselves.',
+	'socialAccount.copy':
+		'Copies connected social accounts from one team to another, reusing their authorization without signing in again.',
+	'socialAccount.enableMessaging':
+		'Turns on direct message processing for the Facebook page or Instagram account of a team. Requires DM access for your organization.',
+	'socialAccount.disableMessaging': 'Turns off direct message processing for the Facebook page or Instagram account of a team.',
+	'socialAccount.getAccountsToDelete': 'Lists the social accounts queued for permanent deletion.',
 	'post.create': 'Schedules a post, or publishes it right away, to one or more connected social accounts.',
 	'post.delete': 'Permanently deletes a post from bundle.social.',
 	'upload.create': 'Uploads an image, video or document of up to 90 MB to the media library, for use in posts.',
 	'upload.createFromUrl': 'Adds an image or video to the media library from a public URL, for use in posts.',
+	'upload.get': 'Finds a media file by ID, with its processing status, dimensions, duration and the posts using it.',
+	'upload.delete': 'Permanently deletes a media file from the media library.',
+	'upload.deleteMany': 'Permanently deletes several media files from the media library at once.',
+	'upload.initLargeUpload':
+		'Starts an upload of a file over 90 MB and returns the signed URL to send the file to. Upload Large File does every step for you.',
+	'upload.finalizeLargeUpload': 'Adds a file sent to the signed URL of Initialize Large Upload to the media library.',
+	'upload.initMultipartUpload':
+		'Starts an upload of a file over 5 GB in parts and returns one signed URL per part. Upload Large File covers files up to 5 GB.',
+	'upload.signMultipartParts': 'Issues new signed URLs for parts of a multipart upload whose URLs expired.',
+	'upload.completeMultipartUpload': 'Assembles the uploaded parts of a multipart upload and adds the file to the media library.',
+	'upload.abortMultipartUpload': 'Discards an unfinished multipart upload and the parts already sent.',
 	'analytics.getPostAnalytics': 'Retrieves engagement metrics such as likes, comments, shares and views for a published post.',
 	'analytics.getSocialAccountAnalytics':
 		'Retrieves profile metrics such as followers, reach and impressions for a connected social account.',
@@ -98,6 +169,7 @@ const ACRONYMS = {
 // Resource value -> display name, plural noun for "Get many" actions.
 const RESOURCES = {
 	analytics: { name: 'Analytics', plural: 'analytics' },
+	organization: { name: 'Organization' },
 	post: { name: 'Post', plural: 'posts' },
 	socialAccount: { name: 'Social Account', plural: 'social accounts' },
 	team: { name: 'Team', plural: 'teams' },
@@ -106,11 +178,27 @@ const RESOURCES = {
 
 // Same names as the n8n node, so both integrations describe an endpoint the same way.
 const OPERATION_NAMES = {
+	'organization.getOrganization': 'Get',
 	'team.createTeam': 'Create',
+	'team.getTeam': 'Get',
+	'team.getList': GET_MANY,
+	'team.updateTeam': 'Update',
 	'team.deleteTeam': 'Delete',
+	'socialAccount.connectionCheck': 'Run Connection Check',
+	'socialAccount.profileRefresh': 'Refresh Profile',
+	'socialAccount.getByType': 'Get by Type',
+	'socialAccount.getAccountsToDelete': 'Get Scheduled for Deletion',
 	'post.getList': GET_MANY,
+	'upload.getList': GET_MANY,
 	'upload.create': 'Upload File',
 	'upload.createFromUrl': 'Upload From URL',
+	'upload.deleteMany': 'Delete Many Uploads',
+	'upload.initLargeUpload': 'Initialize Large Upload',
+	'upload.finalizeLargeUpload': 'Finalize Large Upload',
+	'upload.initMultipartUpload': 'Initialize Multipart Upload',
+	'upload.signMultipartParts': 'Sign Multipart Upload Parts',
+	'upload.completeMultipartUpload': 'Complete Multipart Upload',
+	'upload.abortMultipartUpload': 'Abort Multipart Upload',
 	'analytics.getSocialAccountAnalytics': 'Get Social Account Analytics',
 	'analytics.getPostAnalytics': 'Get Post Analytics',
 };
@@ -131,6 +219,14 @@ const DATE_FIELDS = new Set(['postDate']);
 // Dropdowns, each backed by a hidden trigger in triggers/lists.js.
 const DYNAMIC = {
 	teamId: 'team_list.id.name',
+	fromTeamId: 'team_list.id.name',
+	toTeamId: 'team_list.id.name',
+	socialAccountId: 'social_account_list.id.name',
+	socialAccountIds: 'social_account_list.id.name',
+};
+// Dropdowns for `{id}` path parameters, keyed by what the ID belongs to.
+const PATH_DYNAMIC = {
+	uploadId: { dynamic: 'upload_list.id.name', label: 'Upload' },
 };
 const DYNAMIC_HELP = 'Pick from the list, or map an ID from an earlier step.';
 const SENSITIVE_NAME = /secret|password|token|apikey/i;
@@ -372,6 +468,13 @@ let currentOperationId = '';
 function descriptionOf(key, rawSchema) {
 	const s = resolveSchema(rawSchema);
 	return DESCRIPTION_OVERRIDES[`${currentOperationId}.${key}`] ?? DESCRIPTION_OVERRIDES[key] ?? s.description ?? rawSchema?.description;
+}
+
+function asDropdown(field, { dynamic, label }) {
+	const { choices: _choices, ...rest } = field;
+	const override = DESCRIPTION_OVERRIDES[`${currentOperationId}.${field.key}`];
+	const helpText = override ? `${DYNAMIC_HELP} ${override}` : DYNAMIC_HELP;
+	return orderKeys({ ...rest, type: 'string', dynamic, label, helpText });
 }
 
 /**
@@ -703,16 +806,16 @@ function buildOperation(operationId, method, apiPath, op) {
 		const param = pathParams.find((p) => p.name === key) ?? { name: key, schema: { type: 'string' } };
 		const owner = key === 'id' ? idOwnerWords(apiPath) : undefined;
 		const semantic = owner ? camelCase(`${owner.join(' ')} id`) : key;
-		push(
-			buildFields(semantic, schemaOf(param), {
-				key: uniqueKey(key, 'path'),
-				label: owner ? `${labelFor(owner.join(' '))} ID` : labelFor(key),
-				to: key,
-				location: 'path',
-				depth: 0,
-				required: true,
-			}),
-		);
+		const built = buildFields(semantic, schemaOf(param), {
+			key: uniqueKey(key, 'path'),
+			label: owner ? `${labelFor(owner.join(' '))} ID` : labelFor(key),
+			to: key,
+			location: 'path',
+			depth: 0,
+			required: true,
+		});
+		if (PATH_DYNAMIC[semantic]) built.fields[0] = asDropdown(built.fields[0], PATH_DYNAMIC[semantic]);
+		push(built);
 	}
 
 	for (const param of queryParams.filter((p) => p.required)) {
@@ -944,6 +1047,50 @@ function buildOperation(operationId, method, apiPath, op) {
 	};
 }
 
+// Operations that chain several requests; the runtime runs them via `spec.custom`.
+function buildCustomOperations(spec) {
+	currentOperationId = 'custom.uploadLargeFile';
+	const finalize = spec.paths['/api/v1/upload/finalize']?.post;
+	if (!finalize) throw new Error('Upload Large File needs POST /api/v1/upload/finalize in the spec');
+	const team = buildFields('teamId', { type: 'string' }, {
+		key: 'teamId',
+		label: 'Team ID',
+		to: 'teamId',
+		location: 'body',
+		depth: 0,
+	});
+	return [
+		{
+			key: 'upload_upload_large_file',
+			type: 'create',
+			noun: 'Upload',
+			label: 'Upload Large File',
+			description:
+				'Uploads a file of up to 5 GB, such as a long video, to the media library: sends the file straight to storage and adds it for use in posts.',
+			operationId: 'custom.uploadLargeFile',
+			inputFields: [
+				{
+					key: 'file',
+					label: 'File',
+					type: 'file',
+					required: true,
+					helpText: 'A file from an earlier step, or a public URL Zapier downloads the file from.',
+				},
+				...team.fields,
+			],
+			spec: {
+				method: 'POST',
+				path: '/api/v1/upload/init',
+				params: [{ key: 'file', in: 'file', to: 'file' }, ...team.params],
+				custom: 'uploadLargeFile',
+			},
+			sample: resultSample(jsonSchemaOf(finalize.responses?.['200']?.content, 'application/json')),
+			resource: 'upload',
+			apiPath: '/api/v1/upload/init, then storage PUT, then /api/v1/upload/finalize',
+		},
+	];
+}
+
 // ---------- output ----------
 
 function quote(s) {
@@ -1043,6 +1190,7 @@ function main() {
 	// A renamed or removed operation in the spec must fail loudly, not silently drop an action from Zaps.
 	const missing = [...PUBLISHED_OPERATIONS, ...TRIGGER_SOURCES].filter((id) => !found.has(id));
 	if (missing.length) throw new Error(`Operations not found in the spec: ${missing.join(', ')}`);
+	for (const built of buildCustomOperations(spec)) (byResource[built.resource] ??= []).push(built);
 
 	// Zapier keys are unique per action type; labels should be too, or the action list gets confusing.
 	const seen = new Map();
