@@ -25,7 +25,7 @@ function socialAccountsOf(teams) {
 	);
 }
 
-// Hidden triggers that power the team, social account and upload dropdowns.
+// Hidden triggers that power the team, social account, post and upload dropdowns.
 const teamList = {
 	key: 'team_list',
 	noun: 'Team',
@@ -63,6 +63,27 @@ const socialAccountList = {
 	},
 };
 
+const postList = {
+	key: 'post_list',
+	noun: 'Post',
+	display: { label: 'List Posts', description: 'Lists the posts of the selected team for the post dropdowns.', hidden: true },
+	operation: {
+		canPaginate: true,
+		perform: async (z, bundle) => {
+			// Posts are listed per team; the field stays disabled until a team is picked (dependsOn).
+			const teamId = bundle.inputData && bundle.inputData.teamId;
+			if (!teamId) return [];
+			const data = await apiRequest(z, bundle, 'GET', '/api/v1/post/', {
+				params: { teamId, orderBy: 'createdAt', order: 'DESC', offset: pageOf(bundle) * PAGE_SIZE, limit: PAGE_SIZE },
+			});
+			return ((data && data.items) || []).map((post) => {
+				const details = [post.status, day(post.postDate)].filter(Boolean).join(', ');
+				return { id: post.id, name: `${post.title || post.id}${details ? ` (${details})` : ''}` };
+			});
+		},
+	},
+};
+
 // Uploads have no file name, so the label is the type, extension and upload date.
 const uploadList = {
 	key: 'upload_list',
@@ -91,5 +112,6 @@ module.exports = {
 	socialAccountsOf,
 	teamList,
 	socialAccountList,
+	postList,
 	uploadList,
 };

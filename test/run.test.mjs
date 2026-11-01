@@ -292,6 +292,96 @@ describe('post actions', () => {
 	});
 });
 
+describe('analytics and comment actions', () => {
+	it('joins bulk post analytics IDs with commas', async () => {
+		nock(API)
+			.get('/api/v1/analytics/post/bulk')
+			.query({ postIds: 'post-1,post-2', platformType: 'TIKTOK' })
+			.reply(200, { results: [], pagination: { page: 1 } });
+
+		const result = await appTester(App.creates.analytics_get_bulk_post_analytics.operation.perform, {
+			authData,
+			inputData: { postIds: ['post-1', 'post-2'], platformType: 'TIKTOK' },
+		});
+
+		expect(result).toEqual({ results: [], pagination: { page: 1 } });
+	});
+
+	it('refreshes post analytics with the post and platform in the body', async () => {
+		nock(API)
+			.post('/api/v1/analytics/post/force', { postId: 'post-1', platformType: 'LINKEDIN' })
+			.reply(200, { id: 'pa-1' });
+
+		const result = await appTester(App.creates.analytics_refresh_post_analytics.operation.perform, {
+			authData,
+			inputData: { postId: 'post-1', platformType: 'LINKEDIN' },
+		});
+
+		expect(result).toEqual({ id: 'pa-1' });
+	});
+
+	it('creates a comment on a post from flattened platform fields', async () => {
+		nock(API)
+			.post('/api/v1/comment/', {
+				teamId: 'team-1',
+				internalPostId: 'post-1',
+				postDate: '2026-01-15T10:00:00+01:00',
+				status: 'SCHEDULED',
+				socialAccountTypes: ['LINKEDIN'],
+				data: { LINKEDIN: { text: 'First comment' } },
+			})
+			.reply(200, { id: 'c-1' });
+
+		const result = await appTester(App.creates.comment_create.operation.perform, {
+			authData,
+			inputData: {
+				teamId: 'team-1',
+				internalPostId: 'post-1',
+				postDate: '2026-01-15T10:00:00+01:00',
+				status: 'SCHEDULED',
+				socialAccountTypes: ['LINKEDIN'],
+				data__LINKEDIN__text: 'First comment',
+			},
+		});
+
+		expect(result).toEqual({ id: 'c-1' });
+	});
+
+	it('requires the platforms on comment update, which the API needs', async () => {
+		const update = App.creates.comment_update.operation;
+		const fields = update.inputFields.find((field) => typeof field === 'function')(null, {
+			inputData: { socialAccountTypes: ['LINKEDIN'] },
+		});
+		expect(fields.find((field) => field.key === 'socialAccountTypes').required).toBe(true);
+		expect(fields.map((field) => field.key)).toContain('data__LINKEDIN__text');
+		expect(fields.map((field) => field.key)).not.toContain('data__TIKTOK__text');
+
+		nock(API)
+			.patch('/api/v1/comment/c-1', { socialAccountTypes: ['LINKEDIN'], data: { LINKEDIN: { text: 'Edited' } } })
+			.reply(200, { id: 'c-1' });
+
+		const result = await appTester(update.perform, {
+			authData,
+			inputData: { id: 'c-1', socialAccountTypes: ['LINKEDIN'], data__LINKEDIN__text: 'Edited' },
+		});
+
+		expect(result).toEqual({ id: 'c-1' });
+	});
+
+	it('runs an action on a fetched comment', async () => {
+		nock(API)
+			.post('/api/v1/comment/import/comments/fc-1/action', { teamId: 'team-1', action: 'HIDE' })
+			.reply(200, { success: true });
+
+		const result = await appTester(App.creates.comment_import_act_on_fetched_comment.operation.perform, {
+			authData,
+			inputData: { commentId: 'fc-1', teamId: 'team-1', action: 'HIDE' },
+		});
+
+		expect(result).toEqual({ success: true });
+	});
+});
+
 describe('searches', () => {
 	it('returns the record in a list', async () => {
 		nock(API).get('/api/v1/team/team-1').reply(200, { id: 'team-1' });
@@ -391,6 +481,41 @@ describe('triggers', () => {
 		});
 
 		expect(result).toEqual([{ id: 'p3' }]);
+	});
+
+	it('polls comments of the selected post', async () => {
+		nock(API)
+			.get('/api/v1/comment/import/comments')
+			.query({ teamId: 'team-1', postId: 'post-1', offset: '0', limit: '100' })
+			.reply(200, { items: [{ id: 'fc1' }], total: 1 });
+
+		const result = await appTester(App.triggers.new_comment.operation.perform, {
+			authData,
+			inputData: { teamId: 'team-1', postId: 'post-1' },
+		});
+
+		expect(result).toEqual([{ id: 'fc1' }]);
+	});
+
+	it('lists nothing in the post dropdown until a team is picked', async () => {
+		const result = await appTester(App.triggers.post_list.operation.perform, { authData, inputData: {} });
+
+		expect(result).toEqual([]);
+	});
+
+	it('lists the posts of the selected team for the dropdown', async () => {
+		nock(API)
+			.get('/api/v1/post/')
+			.query({ teamId: 't1', orderBy: 'createdAt', order: 'DESC', offset: '100', limit: '100' })
+			.reply(200, { items: [{ id: 'p1', title: 'Launch', status: 'SCHEDULED', postDate: '2026-01-15T10:00:00.000Z' }], total: 101 });
+
+		const result = await appTester(App.triggers.post_list.operation.perform, {
+			authData,
+			inputData: { teamId: 't1' },
+			meta: { page: 1 },
+		});
+
+		expect(result).toEqual([{ id: 'p1', name: 'Launch (SCHEDULED, 2026-01-15)' }]);
 	});
 
 	it('polls failed posts by last update', async () => {

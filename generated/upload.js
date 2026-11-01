@@ -962,7 +962,7 @@ module.exports = [
 			bodySwitch: true,
 		},
 		sample: {
-			success: true,
+			parts: [],
 		},
 	},
 	{

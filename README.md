@@ -24,7 +24,7 @@ The key is only ever sent to `https://api.bundle.social`, never to the hosts fil
 
 ## Usage
 
-- **Team**, **Social Account** and **Upload** fields are dropdowns loaded from your organization; you can also map an ID from an earlier step.
+- **Team**, **Social Account**, **Post** and **Upload** fields are dropdowns loaded from your organization; you can also map an ID from an earlier step. **Post** dropdowns list the posts of the selected team, so pick the team first.
 - **Connect Social Account** returns a URL. Open it to sign in to the social network and the account is connected to the team.
 - **Create Post** has one settings section per platform (*TikTok Settings*, *Instagram Settings*, ...). Only the sections of the platforms picked in **Social Account Types** are shown. When that field is mapped from an earlier step, every section is shown.
 - Media goes in two steps: upload it with **Upload File** (a file from an earlier step, or a URL) or **Upload From URL**, then map the returned `id` into **Upload IDs** of the post. **Upload From URL** is the best fit for public links and long videos, because bundle.social downloads the file itself.
@@ -64,6 +64,7 @@ Triggers check bundle.social on Zapier's polling interval.
 | Post Failed | a post fails to publish | `GET /api/v1/post/?status=ERROR` |
 | New Team | a team is created in your organization | `GET /api/v1/team/` |
 | New Social Account | a social account is connected to a team | `GET /api/v1/team/` |
+| New Comment | bundle.social imports a new comment on the selected post | `GET /api/v1/comment/import/comments` |
 
 The post triggers can be narrowed to posts on specific platforms (New Post also to a status), New Social Account to one team.
 
@@ -71,12 +72,28 @@ The post triggers can be narrowed to posts on specific platforms (New Post also 
 
 <!-- actions:start -->
 
-54 actions, generated from the bundle.social OpenAPI spec.
+70 actions, generated from the bundle.social OpenAPI spec.
 
 | Action | What it does | Endpoint |
 |---|---|---|
+| Get Bulk Post Analytics | Retrieves the analytics of up to 60 published posts on one network in a single step. | `GET /api/v1/analytics/post/bulk` |
 | Get Post Analytics | Retrieves engagement metrics such as likes, comments, shares and views for a published post. | `GET /api/v1/analytics/post` |
+| Get Raw Post Analytics | Retrieves the analytics of a published post exactly as the network returns them, for metrics the standard analytics leave out. | `GET /api/v1/analytics/post/raw` |
+| Get Raw Social Account Analytics | Retrieves the analytics of a connected social account exactly as the network returns them, for metrics the standard analytics leave out. | `GET /api/v1/analytics/social-account/raw` |
 | Get Social Account Analytics | Retrieves profile metrics such as followers, reach and impressions for a connected social account. | `GET /api/v1/analytics/social-account` |
+| Refresh Post Analytics | Fetches fresh analytics for a published post from the network right away. Uses network rate limits, so use it sparingly. | `POST /api/v1/analytics/post/force` |
+| Refresh Social Account Analytics | Fetches fresh analytics for a connected social account from the network right away. Uses network rate limits, so use it sparingly. | `POST /api/v1/analytics/social-account/force` |
+| Create Comment | Schedules a comment, or publishes it right away, on a published post or as a reply to a comment, for example the first comment of an Instagram or LinkedIn post. | `POST /api/v1/comment/` |
+| Delete Comment | Permanently deletes a comment from bundle.social. Deleting a scheduled comment cancels it. | `DELETE /api/v1/comment/{id}` |
+| Find Comment | Finds a comment created through bundle.social by ID, with its publishing status and errors. | `GET /api/v1/comment/{id}` |
+| Get Many Comments | Returns many comments. Paging is handled for you. | `GET /api/v1/comment/` |
+| Retry Comment | Publishes a failed comment again, for example after reconnecting an expired account. | `POST /api/v1/comment/{id}/retry` |
+| Update Comment | Updates the text or scheduled time of a comment that has not been published yet. Fields left empty keep their current value. | `PATCH /api/v1/comment/{id}` |
+| Act on Fetched Comment (Comment Import) | Hides, unhides, likes, unlikes, approves, rejects or deletes an imported comment directly on the network. | `POST /api/v1/comment/import/comments/{commentId}/action` |
+| Create Comment Import | Starts importing the existing comments of a published post from the network. | `POST /api/v1/comment/import` |
+| Find Comment Import | Finds a comment import by ID, with its status, progress and result. | `GET /api/v1/comment/import/{importId}` |
+| Get Fetched Comments (Comment Import) | Lists the comments imported from the network for a post. | `GET /api/v1/comment/import/comments` |
+| Get Many Comment Imports | Lists the comment imports of a team with their status. | `GET /api/v1/comment/import` |
 | Get Comments Usage (Organization) | Retrieves how many comments your organization has used against its plan limit this billing period. | `GET /api/v1/organization/usage/comments` |
 | Get Daily Limits Usage (Organization) | Retrieves how many posts a social account has published on a given day against the network's daily cap. | `GET /api/v1/organization/usage/daily-limits` |
 | Get Imports Usage (Organization) | Retrieves the post history import usage of each social account, by team or platform. | `GET /api/v1/organization/usage/imports` |
@@ -144,7 +161,8 @@ npm run generate
 npm install
 npm test                       # schema validation plus request tests against a mocked API
 npx zapier-platform validate   # the checks Zapier runs on push
-bash scripts/smoke-test.sh     # every trigger and action against the real API (reads .env, cleans up after itself)
+bash scripts/smoke-test.sh     # every trigger and action against the real API (reads .env, cleans up after itself),
+                               # then checks that each sample only has keys the live results have
 ```
 
 `scripts/generate.mjs` lists the operations the integration exposes (`PUBLISHED_OPERATIONS`) and holds the naming and description overrides on top of the spec. Fix problems in the generator, never in the generated files: CI regenerates and fails when the output differs. Action keys are stored in users' Zaps, so renaming one breaks existing Zaps.
