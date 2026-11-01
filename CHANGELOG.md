@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.2.0...v1.3.0) (2026-11-01)
+
+
+### Features
+
+* analytics and comment actions ([#4](https://github.com/bundleglobal/bundlesocial-zapier/issues/4)) ([b479a83](https://github.com/bundleglobal/bundlesocial-zapier/commit/b479a83f55dba2ff13454799c62ce379ea1a7faf))
+
 # [1.2.0](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.1.0...v1.2.0) (2026-11-01)
 
 
