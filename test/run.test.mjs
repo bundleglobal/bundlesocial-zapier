@@ -126,6 +126,109 @@ describe('creates', () => {
 		expect(body).toContain('filename="photo.jpg"');
 		expect(body).toContain('Content-Type: image/jpeg\r\n\r\nimage-bytes');
 	});
+
+	it('uploads a large file through init, storage and finalize', async () => {
+		nock('https://files.example.com').get('/video.mp4').reply(200, 'video-bytes', {
+			'Content-Type': 'video/mp4',
+			'Content-Length': '11',
+		});
+		nock(API)
+			.post('/api/v1/upload/init', { teamId: 'team-1', fileName: 'video.mp4', mimeType: 'video/mp4', fileSize: 11 })
+			.reply(200, { url: 'https://storage.example.com/signed?sig=1', path: 'uploads/video.mp4' })
+			.post('/api/v1/upload/finalize', { teamId: 'team-1', path: 'uploads/video.mp4' })
+			.reply(200, { id: 'up-2' });
+		nock('https://storage.example.com', { badheaders: ['x-api-key'] })
+			.put('/signed', 'video-bytes')
+			.query({ sig: '1' })
+			.reply(200);
+
+		const result = await appTester(App.creates.upload_upload_large_file.operation.perform, {
+			authData,
+			inputData: { teamId: 'team-1', file: 'https://files.example.com/video.mp4' },
+		});
+
+		expect(result).toEqual({ id: 'up-2' });
+	});
+
+	it('pages through Get Many Teams with Return All', async () => {
+		nock(API)
+			.get('/api/v1/team/')
+			.query({ offset: '0', limit: '100' })
+			.reply(200, { items: [{ id: 'a' }, { id: 'b' }], total: 3 })
+			.get('/api/v1/team/')
+			.query({ offset: '2', limit: '100' })
+			.reply(200, { items: [{ id: 'c' }], total: 3 });
+
+		const result = await appTester(App.creates.team_get_all.operation.perform, {
+			authData,
+			inputData: { returnAll: 'true' },
+		});
+
+		expect(result).toEqual({ items: [{ id: 'a' }, { id: 'b' }, { id: 'c' }], total: 3 });
+	});
+
+	it('sends only the team fields that are set on update', async () => {
+		nock(API).patch('/api/v1/team/team-1', { name: 'Renamed' }).reply(200, { id: 'team-1', name: 'Renamed' });
+
+		const result = await appTester(App.creates.team_update.operation.perform, {
+			authData,
+			inputData: { id: 'team-1', name: 'Renamed' },
+		});
+
+		expect(result).toEqual({ id: 'team-1', name: 'Renamed' });
+	});
+
+	it('copies social accounts between teams', async () => {
+		nock(API)
+			.post('/api/v1/social-account/copy', {
+				fromTeamId: 'team-1',
+				toTeamId: 'team-2',
+				socialAccountTypes: ['TIKTOK', 'INSTAGRAM'],
+			})
+			.reply(200, { success: true });
+
+		const result = await appTester(App.creates.social_account_copy.operation.perform, {
+			authData,
+			inputData: { fromTeamId: 'team-1', toTeamId: 'team-2', socialAccountTypes: ['TIKTOK', 'INSTAGRAM'] },
+		});
+
+		expect(result).toEqual({ success: true });
+	});
+
+	it('deletes several uploads by ID', async () => {
+		nock(API).delete('/api/v1/upload/', { ids: ['up-1', 'up-2'] }).reply(200, { deleted: 2 });
+
+		const result = await appTester(App.creates.upload_delete_many_uploads.operation.perform, {
+			authData,
+			inputData: { ids: ['up-1', 'up-2'] },
+		});
+
+		expect(result).toEqual({ deleted: 2 });
+	});
+});
+
+describe('searches', () => {
+	it('returns the record in a list', async () => {
+		nock(API).get('/api/v1/team/team-1').reply(200, { id: 'team-1' });
+
+		const result = await appTester(App.searches.team_get.operation.perform, {
+			authData,
+			inputData: { id: 'team-1' },
+		});
+
+		expect(result).toEqual([{ id: 'team-1' }]);
+	});
+
+	it('returns an empty list when the record does not exist', async () => {
+		nock(API).get('/api/v1/upload/missing').reply(404, { message: 'Not found' });
+
+		const result = await appTester(App.searches.upload_get.operation.perform, {
+			authData,
+			inputData: { id: 'missing' },
+		});
+
+		expect(result).toEqual([]);
+	});
 });
 
 describe('dynamic fields', () => {
@@ -207,5 +310,80 @@ describe('triggers', () => {
 		});
 
 		expect(result).toEqual([{ id: 't1', name: 'Brand' }]);
+	});
+
+	it('returns the newest teams first', async () => {
+		nock(API)
+			.get('/api/v1/team/')
+			.query({ offset: '0', limit: '1' })
+			.reply(200, { items: [{ id: 't1' }], total: 2 })
+			.get('/api/v1/team/')
+			.query({ offset: '0', limit: '100' })
+			.reply(200, { items: [{ id: 't1' }, { id: 't2' }], total: 2 });
+
+		const result = await appTester(App.triggers.new_team.operation.perform, { authData, inputData: {} });
+
+		expect(result.map((team) => team.id)).toEqual(['t2', 't1']);
+	});
+
+	it('returns the newest social accounts of the selected team first', async () => {
+		nock(API)
+			.get('/api/v1/team/')
+			.query({ offset: '0', limit: '100' })
+			.reply(200, {
+				items: [
+					{
+						id: 't1',
+						name: 'Brand',
+						socialAccounts: [
+							{ id: 's1', teamId: 't1', createdAt: '2026-01-01T00:00:00.000Z' },
+							{ id: 's2', teamId: 't1', createdAt: '2026-02-01T00:00:00.000Z' },
+						],
+					},
+					{ id: 't2', name: 'Other', socialAccounts: [{ id: 's3', teamId: 't2', createdAt: '2026-03-01T00:00:00.000Z' }] },
+				],
+				total: 2,
+			});
+
+		const result = await appTester(App.triggers.new_social_account.operation.perform, {
+			authData,
+			inputData: { teamId: 't1' },
+		});
+
+		expect(result.map((account) => [account.id, account.teamName])).toEqual([
+			['s2', 'Brand'],
+			['s1', 'Brand'],
+		]);
+	});
+
+	it('labels uploads by type, extension and date', async () => {
+		nock(API)
+			.get('/api/v1/upload/')
+			.query({ includePosts: 'false', offset: '0', limit: '100' })
+			.reply(200, [{ id: 'abcdef123456', type: 'image', ext: 'jpg', createdAt: '2026-01-15T10:00:00.000Z' }]);
+
+		const result = await appTester(App.triggers.upload_list.operation.perform, { authData, inputData: {} });
+
+		expect(result).toEqual([{ id: 'abcdef123456', name: 'image .jpg (2026-01-15, abcdef12)' }]);
+	});
+
+	it('lists social accounts of the selected team for the dropdown', async () => {
+		nock(API)
+			.get('/api/v1/team/')
+			.query({ offset: '0', limit: '100' })
+			.reply(200, {
+				items: [
+					{ id: 't1', name: 'Brand', socialAccounts: [{ id: 's1', teamId: 't1', type: 'TIKTOK', displayName: 'Brand TT' }] },
+					{ id: 't2', name: 'Other', socialAccounts: [{ id: 's2', teamId: 't2', type: 'INSTAGRAM', username: 'other' }] },
+				],
+				total: 2,
+			});
+
+		const result = await appTester(App.triggers.social_account_list.operation.perform, {
+			authData,
+			inputData: { teamId: 't1' },
+		});
+
+		expect(result).toEqual([{ id: 's1', name: 'Brand TT (TIKTOK, Brand)' }]);
 	});
 });

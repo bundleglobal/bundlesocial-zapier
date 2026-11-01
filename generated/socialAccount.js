@@ -290,6 +290,823 @@ module.exports = [
 		},
 	},
 	{
+		key: 'social_account_copy',
+		type: 'create',
+		noun: 'Social Account',
+		label: 'Copy Social Account',
+		description: 'Copies connected social accounts from one team to another, reusing their authorization without signing in again.',
+		operationId: 'socialAccount.copy',
+		inputFields: [
+			{
+				key: 'bodyInput',
+				label: 'Specify Body',
+				type: 'string',
+				choices: [
+					{
+						value: 'fields',
+						label: 'Using fields below',
+						sample: 'fields',
+					},
+					{
+						value: 'json',
+						label: 'Using JSON',
+						sample: 'json',
+					},
+				],
+				altersDynamicFields: true,
+				default: 'fields',
+				helpText: 'Switch to **Using JSON** to send the raw request body, which is handy for automation flow definitions or when the body comes from an earlier step.',
+			},
+			{
+				key: 'fromTeamId',
+				label: 'From Team',
+				type: 'string',
+				required: true,
+				dynamic: 'team_list.id.name',
+				helpText: 'Pick from the list, or map an ID from an earlier step.',
+				_body: true,
+			},
+			{
+				key: 'toTeamId',
+				label: 'To Team',
+				type: 'string',
+				required: true,
+				dynamic: 'team_list.id.name',
+				helpText: 'Pick from the list, or map an ID from an earlier step.',
+				_body: true,
+			},
+			{
+				key: 'socialAccountTypes',
+				label: 'Social Account Types',
+				type: 'string',
+				required: true,
+				list: true,
+				choices: [
+					{
+						value: 'BLUESKY',
+						label: 'Bluesky',
+						sample: 'BLUESKY',
+					},
+					{
+						value: 'DISCORD',
+						label: 'Discord',
+						sample: 'DISCORD',
+					},
+					{
+						value: 'FACEBOOK',
+						label: 'Facebook',
+						sample: 'FACEBOOK',
+					},
+					{
+						value: 'GOOGLE_BUSINESS',
+						label: 'Google Business Profile',
+						sample: 'GOOGLE_BUSINESS',
+					},
+					{
+						value: 'INSTAGRAM',
+						label: 'Instagram',
+						sample: 'INSTAGRAM',
+					},
+					{
+						value: 'LINKEDIN',
+						label: 'LinkedIn',
+						sample: 'LINKEDIN',
+					},
+					{
+						value: 'MASTODON',
+						label: 'Mastodon',
+						sample: 'MASTODON',
+					},
+					{
+						value: 'PINTEREST',
+						label: 'Pinterest',
+						sample: 'PINTEREST',
+					},
+					{
+						value: 'REDDIT',
+						label: 'Reddit',
+						sample: 'REDDIT',
+					},
+					{
+						value: 'SLACK',
+						label: 'Slack',
+						sample: 'SLACK',
+					},
+					{
+						value: 'SNAPCHAT',
+						label: 'Snapchat',
+						sample: 'SNAPCHAT',
+					},
+					{
+						value: 'THREADS',
+						label: 'Threads',
+						sample: 'THREADS',
+					},
+					{
+						value: 'TIKTOK',
+						label: 'TikTok',
+						sample: 'TIKTOK',
+					},
+					{
+						value: 'TWITTER',
+						label: 'X (Twitter)',
+						sample: 'TWITTER',
+					},
+					{
+						value: 'YOUTUBE',
+						label: 'YouTube',
+						sample: 'YOUTUBE',
+					},
+				],
+				_body: true,
+				altersDynamicFields: true,
+			},
+			{
+				key: 'resetChannel',
+				label: 'Reset Channel',
+				type: 'boolean',
+				helpText: 'If you set that to true, selected page will not be transferred automatically. The user will have to select the page themselves again. This only applies to Facebook, Instagram, Linkedin and Youtube.',
+				_body: true,
+			},
+		],
+		selector: 'socialAccountTypes',
+		spec: {
+			method: 'POST',
+			path: '/api/v1/social-account/copy',
+			params: [
+				{
+					key: 'jsonBody',
+					in: 'jsonBody',
+				},
+				{
+					key: 'fromTeamId',
+					in: 'body',
+					to: 'fromTeamId',
+				},
+				{
+					key: 'toTeamId',
+					in: 'body',
+					to: 'toTeamId',
+				},
+				{
+					key: 'socialAccountTypes',
+					in: 'body',
+					to: 'socialAccountTypes',
+					shape: {
+						kind: 'list',
+					},
+				},
+				{
+					key: 'resetChannel',
+					in: 'body',
+					to: 'resetChannel',
+					shape: {
+						kind: 'boolean',
+					},
+				},
+			],
+			body: 'json',
+			bodySwitch: true,
+		},
+		sample: {
+			items: [
+				{
+					id: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+					type: 'TIKTOK',
+					teamId: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+					createdAt: '2026-01-15T10:00:00.000Z',
+					updatedAt: '2026-01-15T10:00:00.000Z',
+				},
+			],
+		},
+	},
+	{
+		key: 'social_account_create_portal_link',
+		type: 'create',
+		noun: 'Social Account',
+		label: 'Create Portal Link (Social Account)',
+		description: 'Generates a hosted portal link where your users connect and manage the social accounts of a team themselves.',
+		operationId: 'socialAccount.createPortalLink',
+		inputFields: [
+			{
+				key: 'bodyInput',
+				label: 'Specify Body',
+				type: 'string',
+				choices: [
+					{
+						value: 'fields',
+						label: 'Using fields below',
+						sample: 'fields',
+					},
+					{
+						value: 'json',
+						label: 'Using JSON',
+						sample: 'json',
+					},
+				],
+				altersDynamicFields: true,
+				default: 'fields',
+				helpText: 'Switch to **Using JSON** to send the raw request body, which is handy for automation flow definitions or when the body comes from an earlier step.',
+			},
+			{
+				key: 'teamId',
+				label: 'Team',
+				type: 'string',
+				required: true,
+				dynamic: 'team_list.id.name',
+				helpText: 'Pick from the list, or map an ID from an earlier step.',
+				_body: true,
+			},
+			{
+				key: 'socialAccountTypes',
+				label: 'Social Account Types',
+				type: 'string',
+				required: true,
+				list: true,
+				choices: [
+					{
+						value: 'BLUESKY',
+						label: 'Bluesky',
+						sample: 'BLUESKY',
+					},
+					{
+						value: 'DISCORD',
+						label: 'Discord',
+						sample: 'DISCORD',
+					},
+					{
+						value: 'FACEBOOK',
+						label: 'Facebook',
+						sample: 'FACEBOOK',
+					},
+					{
+						value: 'GOOGLE_BUSINESS',
+						label: 'Google Business Profile',
+						sample: 'GOOGLE_BUSINESS',
+					},
+					{
+						value: 'INSTAGRAM',
+						label: 'Instagram',
+						sample: 'INSTAGRAM',
+					},
+					{
+						value: 'LINKEDIN',
+						label: 'LinkedIn',
+						sample: 'LINKEDIN',
+					},
+					{
+						value: 'MASTODON',
+						label: 'Mastodon',
+						sample: 'MASTODON',
+					},
+					{
+						value: 'PINTEREST',
+						label: 'Pinterest',
+						sample: 'PINTEREST',
+					},
+					{
+						value: 'REDDIT',
+						label: 'Reddit',
+						sample: 'REDDIT',
+					},
+					{
+						value: 'SLACK',
+						label: 'Slack',
+						sample: 'SLACK',
+					},
+					{
+						value: 'SNAPCHAT',
+						label: 'Snapchat',
+						sample: 'SNAPCHAT',
+					},
+					{
+						value: 'THREADS',
+						label: 'Threads',
+						sample: 'THREADS',
+					},
+					{
+						value: 'TIKTOK',
+						label: 'TikTok',
+						sample: 'TIKTOK',
+					},
+					{
+						value: 'TWITTER',
+						label: 'X (Twitter)',
+						sample: 'TWITTER',
+					},
+					{
+						value: 'YOUTUBE',
+						label: 'YouTube',
+						sample: 'YOUTUBE',
+					},
+				],
+				_body: true,
+				altersDynamicFields: true,
+			},
+			{
+				key: 'redirectUrl',
+				label: 'Redirect URL',
+				type: 'string',
+				placeholder: 'https://example.com',
+				_body: true,
+			},
+			{
+				key: 'serverUrl',
+				label: 'Server URL',
+				type: 'string',
+				placeholder: 'https://example.com',
+				helpText: 'Mastodon or Bluesky only. Required for Mastodon (the user\'s instance, e.g. https://mastodon.social). Optional for Bluesky - omit it to use the default issuer https://bsky.social, or pass a custom PDS/entryway issuer.',
+				_body: true,
+			},
+			{
+				key: 'disableAutoLogin',
+				label: 'Disable Auto Login',
+				type: 'boolean',
+				helpText: 'Optional. If true, portal will request provider-specific anti-auto-login behavior where supported.',
+				_body: true,
+			},
+			{
+				key: 'tiktokForceLogin',
+				label: 'TikTok Force Login',
+				type: 'boolean',
+				helpText: 'Optional and experimental. TikTok only. When true, portal routes TikTok authorization through logout to request a fresh login session.',
+				_body: true,
+			},
+			{
+				key: 'forceBrowserOAuth',
+				label: 'Force Browser OAuth',
+				type: 'boolean',
+				helpText: 'Optional. Instagram direct OAuth only. When true, Instagram asks for a fresh login instead of reusing the account logged in on that browser. In the hosted portal it applies only on iPhone/iPad. Staying in the browser on iOS is the default for every connection and needs no flag.',
+				_body: true,
+			},
+			{
+				key: 'instagramConnectionMethod',
+				label: 'Instagram Connection Method',
+				type: 'string',
+				choices: [
+					{
+						value: 'FACEBOOK',
+						label: 'Facebook',
+						sample: 'FACEBOOK',
+					},
+					{
+						value: 'INSTAGRAM',
+						label: 'Instagram',
+						sample: 'INSTAGRAM',
+					},
+				],
+				helpText: 'Instagram only - connection method',
+				_body: true,
+			},
+			{
+				key: 'withBusinessScope',
+				label: 'With Business Scope',
+				type: 'boolean',
+				helpText: 'Optional. Facebook and Instagram only - when provided, portal skips business scope selection modal for Facebook login paths.',
+				_body: true,
+			},
+			{
+				key: 'withMessagingScope',
+				label: 'With Messaging Scope',
+				type: 'boolean',
+				helpText: 'Optional. Facebook and Instagram only - request the Meta messaging (DM) scopes. Ignored unless Instagram and Facebook direct messages are enabled for your organization (available on request).',
+				_body: true,
+			},
+			{
+				key: 'expiresIn',
+				label: 'Expires In',
+				type: 'integer',
+				helpText: 'Time in minutes, after which the link will expire. Minimum 5 minutes, maximum 48 hours.',
+				_body: true,
+			},
+			{
+				key: 'logoUrl',
+				label: 'Logo URL',
+				type: 'string',
+				placeholder: 'https://example.com',
+				_body: true,
+			},
+			{
+				key: 'userLogoUrl',
+				label: 'User Logo URL',
+				type: 'string',
+				placeholder: 'https://example.com',
+				_body: true,
+			},
+			{
+				key: 'userName',
+				label: 'User Name',
+				type: 'string',
+				_body: true,
+			},
+			{
+				key: 'goBackButtonText',
+				label: 'Go Back Button Text',
+				type: 'string',
+				_body: true,
+			},
+			{
+				key: 'hidePoweredBy',
+				label: 'Hide Powered By',
+				type: 'boolean',
+				_body: true,
+			},
+			{
+				key: 'hideGoBackButton',
+				label: 'Hide Go Back Button',
+				type: 'boolean',
+				_body: true,
+			},
+			{
+				key: 'hideUserLogo',
+				label: 'Hide User Logo',
+				type: 'boolean',
+				_body: true,
+			},
+			{
+				key: 'hideUserName',
+				label: 'Hide User Name',
+				type: 'boolean',
+				_body: true,
+			},
+			{
+				key: 'hideLanguageSwitcher',
+				label: 'Hide Language Switcher',
+				type: 'boolean',
+				_body: true,
+			},
+			{
+				key: 'showModalOnConnectSuccess',
+				label: 'Show Modal on Connect Success',
+				type: 'boolean',
+				_body: true,
+			},
+			{
+				key: 'language',
+				label: 'Language',
+				type: 'string',
+				choices: [
+					{
+						value: 'ar',
+						label: 'Ar',
+						sample: 'ar',
+					},
+					{
+						value: 'da',
+						label: 'Da',
+						sample: 'da',
+					},
+					{
+						value: 'de',
+						label: 'De',
+						sample: 'de',
+					},
+					{
+						value: 'en',
+						label: 'En',
+						sample: 'en',
+					},
+					{
+						value: 'es',
+						label: 'Es',
+						sample: 'es',
+					},
+					{
+						value: 'fr',
+						label: 'Fr',
+						sample: 'fr',
+					},
+					{
+						value: 'he',
+						label: 'He',
+						sample: 'he',
+					},
+					{
+						value: 'hi',
+						label: 'Hi',
+						sample: 'hi',
+					},
+					{
+						value: 'it',
+						label: 'It',
+						sample: 'it',
+					},
+					{
+						value: 'ko',
+						label: 'Ko',
+						sample: 'ko',
+					},
+					{
+						value: 'nl',
+						label: 'Nl',
+						sample: 'nl',
+					},
+					{
+						value: 'pl',
+						label: 'Pl',
+						sample: 'pl',
+					},
+					{
+						value: 'pt',
+						label: 'Pt',
+						sample: 'pt',
+					},
+					{
+						value: 'ru',
+						label: 'Ru',
+						sample: 'ru',
+					},
+					{
+						value: 'sv',
+						label: 'Sv',
+						sample: 'sv',
+					},
+					{
+						value: 'th',
+						label: 'Th',
+						sample: 'th',
+					},
+					{
+						value: 'tr',
+						label: 'Tr',
+						sample: 'tr',
+					},
+					{
+						value: 'zh',
+						label: 'Zh',
+						sample: 'zh',
+					},
+				],
+				_body: true,
+			},
+			{
+				key: 'maxSocialAccountsConnected',
+				label: 'Max Social Accounts Connected',
+				type: 'number',
+				_body: true,
+			},
+		],
+		selector: 'socialAccountTypes',
+		spec: {
+			method: 'POST',
+			path: '/api/v1/social-account/create-portal-link',
+			params: [
+				{
+					key: 'jsonBody',
+					in: 'jsonBody',
+				},
+				{
+					key: 'teamId',
+					in: 'body',
+					to: 'teamId',
+				},
+				{
+					key: 'socialAccountTypes',
+					in: 'body',
+					to: 'socialAccountTypes',
+					shape: {
+						kind: 'list',
+					},
+				},
+				{
+					key: 'redirectUrl',
+					in: 'body',
+					to: 'redirectUrl',
+				},
+				{
+					key: 'serverUrl',
+					in: 'body',
+					to: 'serverUrl',
+				},
+				{
+					key: 'disableAutoLogin',
+					in: 'body',
+					to: 'disableAutoLogin',
+					shape: {
+						kind: 'boolean',
+					},
+				},
+				{
+					key: 'tiktokForceLogin',
+					in: 'body',
+					to: 'tiktokForceLogin',
+					shape: {
+						kind: 'boolean',
+					},
+				},
+				{
+					key: 'forceBrowserOAuth',
+					in: 'body',
+					to: 'forceBrowserOAuth',
+					shape: {
+						kind: 'boolean',
+					},
+				},
+				{
+					key: 'instagramConnectionMethod',
+					in: 'body',
+					to: 'instagramConnectionMethod',
+				},
+				{
+					key: 'withBusinessScope',
+					in: 'body',
+					to: 'withBusinessScope',
+					shape: {
+						kind: 'boolean',
+					},
+				},
+				{
+					key: 'withMessagingScope',
+					in: 'body',
+					to: 'withMessagingScope',
+					shape: {
+						kind: 'boolean',
+					},
+				},
+				{
+					key: 'expiresIn',
+					in: 'body',
+					to: 'expiresIn',
+					shape: {
+						kind: 'number',
+					},
+				},
+				{
+					key: 'logoUrl',
+					in: 'body',
+					to: 'logoUrl',
+				},
+				{
+					key: 'userLogoUrl',
+					in: 'body',
+					to: 'userLogoUrl',
+				},
+				{
+					key: 'userName',
+					in: 'body',
+					to: 'userName',
+				},
+				{
+					key: 'goBackButtonText',
+					in: 'body',
+					to: 'goBackButtonText',
+				},
+				{
+					key: 'hidePoweredBy',
+					in: 'body',
+					to: 'hidePoweredBy',
+					shape: {
+						kind: 'boolean',
+					},
+				},
+				{
+					key: 'hideGoBackButton',
+					in: 'body',
+					to: 'hideGoBackButton',
+					shape: {
+						kind: 'boolean',
+					},
+				},
+				{
+					key: 'hideUserLogo',
+					in: 'body',
+					to: 'hideUserLogo',
+					shape: {
+						kind: 'boolean',
+					},
+				},
+				{
+					key: 'hideUserName',
+					in: 'body',
+					to: 'hideUserName',
+					shape: {
+						kind: 'boolean',
+					},
+				},
+				{
+					key: 'hideLanguageSwitcher',
+					in: 'body',
+					to: 'hideLanguageSwitcher',
+					shape: {
+						kind: 'boolean',
+					},
+				},
+				{
+					key: 'showModalOnConnectSuccess',
+					in: 'body',
+					to: 'showModalOnConnectSuccess',
+					shape: {
+						kind: 'boolean',
+					},
+				},
+				{
+					key: 'language',
+					in: 'body',
+					to: 'language',
+				},
+				{
+					key: 'maxSocialAccountsConnected',
+					in: 'body',
+					to: 'maxSocialAccountsConnected',
+					shape: {
+						kind: 'number',
+					},
+				},
+			],
+			body: 'json',
+			bodySwitch: true,
+		},
+		sample: {
+			url: 'https://example.com/image.jpg',
+		},
+	},
+	{
+		key: 'social_account_disable_messaging',
+		type: 'create',
+		noun: 'Social Account',
+		label: 'Disable Messaging (Social Account)',
+		description: 'Turns off direct message processing for the Facebook page or Instagram account of a team.',
+		operationId: 'socialAccount.disableMessaging',
+		inputFields: [
+			{
+				key: 'bodyInput',
+				label: 'Specify Body',
+				type: 'string',
+				choices: [
+					{
+						value: 'fields',
+						label: 'Using fields below',
+						sample: 'fields',
+					},
+					{
+						value: 'json',
+						label: 'Using JSON',
+						sample: 'json',
+					},
+				],
+				altersDynamicFields: true,
+				default: 'fields',
+				helpText: 'Switch to **Using JSON** to send the raw request body, which is handy for automation flow definitions or when the body comes from an earlier step.',
+			},
+			{
+				key: 'teamId',
+				label: 'Team',
+				type: 'string',
+				required: true,
+				dynamic: 'team_list.id.name',
+				helpText: 'Pick from the list, or map an ID from an earlier step.',
+				_body: true,
+			},
+			{
+				key: 'type',
+				label: 'Type',
+				type: 'string',
+				required: true,
+				choices: [
+					{
+						value: 'FACEBOOK',
+						label: 'Facebook',
+						sample: 'FACEBOOK',
+					},
+					{
+						value: 'INSTAGRAM',
+						label: 'Instagram',
+						sample: 'INSTAGRAM',
+					},
+				],
+				_body: true,
+			},
+		],
+		spec: {
+			method: 'POST',
+			path: '/api/v1/social-account/messaging/disable',
+			params: [
+				{
+					key: 'jsonBody',
+					in: 'jsonBody',
+				},
+				{
+					key: 'teamId',
+					in: 'body',
+					to: 'teamId',
+				},
+				{
+					key: 'type',
+					in: 'body',
+					to: 'type',
+				},
+			],
+			body: 'json',
+			bodySwitch: true,
+		},
+		sample: {
+			socialAccountId: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+			type: 'FACEBOOK',
+			messagingStatus: 'DISABLED',
+			messagingLastError: 'Sample messaging last error',
+		},
+	},
+	{
 		key: 'social_account_disconnect',
 		type: 'create',
 		noun: 'Social Account',
@@ -414,6 +1231,928 @@ module.exports = [
 		spec: {
 			method: 'DELETE',
 			path: '/api/v1/social-account/disconnect',
+			params: [
+				{
+					key: 'jsonBody',
+					in: 'jsonBody',
+				},
+				{
+					key: 'type',
+					in: 'body',
+					to: 'type',
+				},
+				{
+					key: 'teamId',
+					in: 'body',
+					to: 'teamId',
+				},
+			],
+			body: 'json',
+			bodySwitch: true,
+		},
+		sample: {
+			id: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+			type: 'TIKTOK',
+			teamId: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+			createdAt: '2026-01-15T10:00:00.000Z',
+			updatedAt: '2026-01-15T10:00:00.000Z',
+		},
+	},
+	{
+		key: 'social_account_enable_messaging',
+		type: 'create',
+		noun: 'Social Account',
+		label: 'Enable Messaging (Social Account)',
+		description: 'Turns on direct message processing for the Facebook page or Instagram account of a team. Requires DM access for your organization.',
+		operationId: 'socialAccount.enableMessaging',
+		inputFields: [
+			{
+				key: 'bodyInput',
+				label: 'Specify Body',
+				type: 'string',
+				choices: [
+					{
+						value: 'fields',
+						label: 'Using fields below',
+						sample: 'fields',
+					},
+					{
+						value: 'json',
+						label: 'Using JSON',
+						sample: 'json',
+					},
+				],
+				altersDynamicFields: true,
+				default: 'fields',
+				helpText: 'Switch to **Using JSON** to send the raw request body, which is handy for automation flow definitions or when the body comes from an earlier step.',
+			},
+			{
+				key: 'teamId',
+				label: 'Team',
+				type: 'string',
+				required: true,
+				dynamic: 'team_list.id.name',
+				helpText: 'Pick from the list, or map an ID from an earlier step.',
+				_body: true,
+			},
+			{
+				key: 'type',
+				label: 'Type',
+				type: 'string',
+				required: true,
+				choices: [
+					{
+						value: 'FACEBOOK',
+						label: 'Facebook',
+						sample: 'FACEBOOK',
+					},
+					{
+						value: 'INSTAGRAM',
+						label: 'Instagram',
+						sample: 'INSTAGRAM',
+					},
+				],
+				_body: true,
+			},
+		],
+		spec: {
+			method: 'POST',
+			path: '/api/v1/social-account/messaging/enable',
+			params: [
+				{
+					key: 'jsonBody',
+					in: 'jsonBody',
+				},
+				{
+					key: 'teamId',
+					in: 'body',
+					to: 'teamId',
+				},
+				{
+					key: 'type',
+					in: 'body',
+					to: 'type',
+				},
+			],
+			body: 'json',
+			bodySwitch: true,
+		},
+		sample: {
+			socialAccountId: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+			type: 'FACEBOOK',
+			messagingStatus: 'DISABLED',
+			messagingLastError: 'Sample messaging last error',
+		},
+	},
+	{
+		key: 'social_account_get_scheduled_for_deletion',
+		type: 'create',
+		noun: 'Social Account',
+		label: 'Get Scheduled for Deletion (Social Account)',
+		description: 'Lists the social accounts queued for permanent deletion.',
+		operationId: 'socialAccount.getAccountsToDelete',
+		inputFields: [
+			{
+				key: 'page',
+				label: 'Page',
+				type: 'number',
+			},
+			{
+				key: 'pageSize',
+				label: 'Page Size',
+				type: 'number',
+			},
+		],
+		spec: {
+			method: 'GET',
+			path: '/api/v1/social-account/to-delete',
+			params: [
+				{
+					key: 'page',
+					in: 'query',
+					to: 'page',
+					shape: {
+						kind: 'number',
+					},
+				},
+				{
+					key: 'pageSize',
+					in: 'query',
+					to: 'pageSize',
+					shape: {
+						kind: 'number',
+					},
+				},
+			],
+		},
+		sample: {
+			items: [
+				{
+					id: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+					type: 'TIKTOK',
+					teamId: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+					createdAt: '2026-01-15T10:00:00.000Z',
+					updatedAt: '2026-01-15T10:00:00.000Z',
+				},
+			],
+			pagination: {
+				page: 1,
+				pageSize: 1,
+				total: 1,
+				totalPages: 1,
+			},
+		},
+	},
+	{
+		key: 'social_account_get_by_type',
+		type: 'create',
+		noun: 'Social Account',
+		label: 'Get Social Account by Type',
+		description: 'Retrieves the team\'s connected social account on the selected network.',
+		operationId: 'socialAccount.getByType',
+		inputFields: [
+			{
+				key: 'type',
+				label: 'Type',
+				type: 'string',
+				required: true,
+				choices: [
+					{
+						value: 'BLUESKY',
+						label: 'Bluesky',
+						sample: 'BLUESKY',
+					},
+					{
+						value: 'DISCORD',
+						label: 'Discord',
+						sample: 'DISCORD',
+					},
+					{
+						value: 'FACEBOOK',
+						label: 'Facebook',
+						sample: 'FACEBOOK',
+					},
+					{
+						value: 'GOOGLE_BUSINESS',
+						label: 'Google Business Profile',
+						sample: 'GOOGLE_BUSINESS',
+					},
+					{
+						value: 'INSTAGRAM',
+						label: 'Instagram',
+						sample: 'INSTAGRAM',
+					},
+					{
+						value: 'LINKEDIN',
+						label: 'LinkedIn',
+						sample: 'LINKEDIN',
+					},
+					{
+						value: 'MASTODON',
+						label: 'Mastodon',
+						sample: 'MASTODON',
+					},
+					{
+						value: 'PINTEREST',
+						label: 'Pinterest',
+						sample: 'PINTEREST',
+					},
+					{
+						value: 'REDDIT',
+						label: 'Reddit',
+						sample: 'REDDIT',
+					},
+					{
+						value: 'SLACK',
+						label: 'Slack',
+						sample: 'SLACK',
+					},
+					{
+						value: 'SNAPCHAT',
+						label: 'Snapchat',
+						sample: 'SNAPCHAT',
+					},
+					{
+						value: 'THREADS',
+						label: 'Threads',
+						sample: 'THREADS',
+					},
+					{
+						value: 'TIKTOK',
+						label: 'TikTok',
+						sample: 'TIKTOK',
+					},
+					{
+						value: 'TWITTER',
+						label: 'X (Twitter)',
+						sample: 'TWITTER',
+					},
+					{
+						value: 'YOUTUBE',
+						label: 'YouTube',
+						sample: 'YOUTUBE',
+					},
+				],
+			},
+			{
+				key: 'teamId',
+				label: 'Team',
+				type: 'string',
+				required: true,
+				dynamic: 'team_list.id.name',
+				helpText: 'Pick from the list, or map an ID from an earlier step.',
+			},
+		],
+		spec: {
+			method: 'GET',
+			path: '/api/v1/social-account/by-type',
+			params: [
+				{
+					key: 'type',
+					in: 'query',
+					to: 'type',
+				},
+				{
+					key: 'teamId',
+					in: 'query',
+					to: 'teamId',
+				},
+			],
+		},
+		sample: {
+			id: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+			type: 'TIKTOK',
+			teamId: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+			createdAt: '2026-01-15T10:00:00.000Z',
+			updatedAt: '2026-01-15T10:00:00.000Z',
+		},
+	},
+	{
+		key: 'social_account_refresh_channels',
+		type: 'create',
+		noun: 'Social Account',
+		label: 'Refresh Channels (Social Account)',
+		description: 'Reloads the channels available to a Reddit, Discord, Slack or Pinterest account from the network.',
+		operationId: 'socialAccount.refreshChannels',
+		inputFields: [
+			{
+				key: 'bodyInput',
+				label: 'Specify Body',
+				type: 'string',
+				choices: [
+					{
+						value: 'fields',
+						label: 'Using fields below',
+						sample: 'fields',
+					},
+					{
+						value: 'json',
+						label: 'Using JSON',
+						sample: 'json',
+					},
+				],
+				altersDynamicFields: true,
+				default: 'fields',
+				helpText: 'Switch to **Using JSON** to send the raw request body, which is handy for automation flow definitions or when the body comes from an earlier step.',
+			},
+			{
+				key: 'type',
+				label: 'Type',
+				type: 'string',
+				required: true,
+				choices: [
+					{
+						value: 'DISCORD',
+						label: 'Discord',
+						sample: 'DISCORD',
+					},
+					{
+						value: 'FACEBOOK',
+						label: 'Facebook',
+						sample: 'FACEBOOK',
+					},
+					{
+						value: 'GOOGLE_BUSINESS',
+						label: 'Google Business Profile',
+						sample: 'GOOGLE_BUSINESS',
+					},
+					{
+						value: 'INSTAGRAM',
+						label: 'Instagram',
+						sample: 'INSTAGRAM',
+					},
+					{
+						value: 'LINKEDIN',
+						label: 'LinkedIn',
+						sample: 'LINKEDIN',
+					},
+					{
+						value: 'PINTEREST',
+						label: 'Pinterest',
+						sample: 'PINTEREST',
+					},
+					{
+						value: 'REDDIT',
+						label: 'Reddit',
+						sample: 'REDDIT',
+					},
+					{
+						value: 'SLACK',
+						label: 'Slack',
+						sample: 'SLACK',
+					},
+					{
+						value: 'YOUTUBE',
+						label: 'YouTube',
+						sample: 'YOUTUBE',
+					},
+				],
+				_body: true,
+			},
+			{
+				key: 'teamId',
+				label: 'Team',
+				type: 'string',
+				required: true,
+				dynamic: 'team_list.id.name',
+				helpText: 'Pick from the list, or map an ID from an earlier step.',
+				_body: true,
+			},
+		],
+		spec: {
+			method: 'POST',
+			path: '/api/v1/social-account/refresh-channels',
+			params: [
+				{
+					key: 'jsonBody',
+					in: 'jsonBody',
+				},
+				{
+					key: 'type',
+					in: 'body',
+					to: 'type',
+				},
+				{
+					key: 'teamId',
+					in: 'body',
+					to: 'teamId',
+				},
+			],
+			body: 'json',
+			bodySwitch: true,
+		},
+		sample: {
+			id: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+			type: 'TIKTOK',
+			teamId: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+			createdAt: '2026-01-15T10:00:00.000Z',
+			updatedAt: '2026-01-15T10:00:00.000Z',
+		},
+	},
+	{
+		key: 'social_account_refresh_profile',
+		type: 'create',
+		noun: 'Social Account',
+		label: 'Refresh Profile (Social Account)',
+		description: 'Updates the profile name, handle and avatar of a social account from the network.',
+		operationId: 'socialAccount.profileRefresh',
+		inputFields: [
+			{
+				key: 'bodyInput',
+				label: 'Specify Body',
+				type: 'string',
+				choices: [
+					{
+						value: 'fields',
+						label: 'Using fields below',
+						sample: 'fields',
+					},
+					{
+						value: 'json',
+						label: 'Using JSON',
+						sample: 'json',
+					},
+				],
+				altersDynamicFields: true,
+				default: 'fields',
+				helpText: 'Switch to **Using JSON** to send the raw request body, which is handy for automation flow definitions or when the body comes from an earlier step.',
+			},
+			{
+				key: 'type',
+				label: 'Type',
+				type: 'string',
+				required: true,
+				choices: [
+					{
+						value: 'BLUESKY',
+						label: 'Bluesky',
+						sample: 'BLUESKY',
+					},
+					{
+						value: 'DISCORD',
+						label: 'Discord',
+						sample: 'DISCORD',
+					},
+					{
+						value: 'FACEBOOK',
+						label: 'Facebook',
+						sample: 'FACEBOOK',
+					},
+					{
+						value: 'GOOGLE_BUSINESS',
+						label: 'Google Business Profile',
+						sample: 'GOOGLE_BUSINESS',
+					},
+					{
+						value: 'INSTAGRAM',
+						label: 'Instagram',
+						sample: 'INSTAGRAM',
+					},
+					{
+						value: 'LINKEDIN',
+						label: 'LinkedIn',
+						sample: 'LINKEDIN',
+					},
+					{
+						value: 'MASTODON',
+						label: 'Mastodon',
+						sample: 'MASTODON',
+					},
+					{
+						value: 'PINTEREST',
+						label: 'Pinterest',
+						sample: 'PINTEREST',
+					},
+					{
+						value: 'REDDIT',
+						label: 'Reddit',
+						sample: 'REDDIT',
+					},
+					{
+						value: 'SLACK',
+						label: 'Slack',
+						sample: 'SLACK',
+					},
+					{
+						value: 'SNAPCHAT',
+						label: 'Snapchat',
+						sample: 'SNAPCHAT',
+					},
+					{
+						value: 'THREADS',
+						label: 'Threads',
+						sample: 'THREADS',
+					},
+					{
+						value: 'TIKTOK',
+						label: 'TikTok',
+						sample: 'TIKTOK',
+					},
+					{
+						value: 'TWITTER',
+						label: 'X (Twitter)',
+						sample: 'TWITTER',
+					},
+					{
+						value: 'YOUTUBE',
+						label: 'YouTube',
+						sample: 'YOUTUBE',
+					},
+				],
+				_body: true,
+			},
+			{
+				key: 'teamId',
+				label: 'Team',
+				type: 'string',
+				required: true,
+				dynamic: 'team_list.id.name',
+				helpText: 'Pick from the list, or map an ID from an earlier step.',
+				_body: true,
+			},
+		],
+		spec: {
+			method: 'POST',
+			path: '/api/v1/social-account/profile-refresh',
+			params: [
+				{
+					key: 'jsonBody',
+					in: 'jsonBody',
+				},
+				{
+					key: 'type',
+					in: 'body',
+					to: 'type',
+				},
+				{
+					key: 'teamId',
+					in: 'body',
+					to: 'teamId',
+				},
+			],
+			body: 'json',
+			bodySwitch: true,
+		},
+		sample: {
+			success: false,
+			socialAccountId: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+			socialAccount: {
+				id: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+				type: 'TIKTOK',
+				teamId: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+				createdAt: '2026-01-15T10:00:00.000Z',
+				updatedAt: '2026-01-15T10:00:00.000Z',
+			},
+			refreshedAt: '2026-01-15T10:00:00.000Z',
+			limit: 1,
+			used: 1,
+			remaining: 1,
+			windowSeconds: 1,
+		},
+	},
+	{
+		key: 'social_account_run_connection_check',
+		type: 'create',
+		noun: 'Social Account',
+		label: 'Run Connection Check (Social Account)',
+		description: 'Checks right away whether a social account is still authorized, so an expired connection shows up before a post fails.',
+		operationId: 'socialAccount.connectionCheck',
+		inputFields: [
+			{
+				key: 'bodyInput',
+				label: 'Specify Body',
+				type: 'string',
+				choices: [
+					{
+						value: 'fields',
+						label: 'Using fields below',
+						sample: 'fields',
+					},
+					{
+						value: 'json',
+						label: 'Using JSON',
+						sample: 'json',
+					},
+				],
+				altersDynamicFields: true,
+				default: 'fields',
+				helpText: 'Switch to **Using JSON** to send the raw request body, which is handy for automation flow definitions or when the body comes from an earlier step.',
+			},
+			{
+				key: 'type',
+				label: 'Type',
+				type: 'string',
+				required: true,
+				choices: [
+					{
+						value: 'BLUESKY',
+						label: 'Bluesky',
+						sample: 'BLUESKY',
+					},
+					{
+						value: 'DISCORD',
+						label: 'Discord',
+						sample: 'DISCORD',
+					},
+					{
+						value: 'FACEBOOK',
+						label: 'Facebook',
+						sample: 'FACEBOOK',
+					},
+					{
+						value: 'GOOGLE_BUSINESS',
+						label: 'Google Business Profile',
+						sample: 'GOOGLE_BUSINESS',
+					},
+					{
+						value: 'INSTAGRAM',
+						label: 'Instagram',
+						sample: 'INSTAGRAM',
+					},
+					{
+						value: 'LINKEDIN',
+						label: 'LinkedIn',
+						sample: 'LINKEDIN',
+					},
+					{
+						value: 'MASTODON',
+						label: 'Mastodon',
+						sample: 'MASTODON',
+					},
+					{
+						value: 'PINTEREST',
+						label: 'Pinterest',
+						sample: 'PINTEREST',
+					},
+					{
+						value: 'REDDIT',
+						label: 'Reddit',
+						sample: 'REDDIT',
+					},
+					{
+						value: 'SLACK',
+						label: 'Slack',
+						sample: 'SLACK',
+					},
+					{
+						value: 'SNAPCHAT',
+						label: 'Snapchat',
+						sample: 'SNAPCHAT',
+					},
+					{
+						value: 'THREADS',
+						label: 'Threads',
+						sample: 'THREADS',
+					},
+					{
+						value: 'TIKTOK',
+						label: 'TikTok',
+						sample: 'TIKTOK',
+					},
+					{
+						value: 'TWITTER',
+						label: 'X (Twitter)',
+						sample: 'TWITTER',
+					},
+					{
+						value: 'YOUTUBE',
+						label: 'YouTube',
+						sample: 'YOUTUBE',
+					},
+				],
+				_body: true,
+			},
+			{
+				key: 'teamId',
+				label: 'Team',
+				type: 'string',
+				required: true,
+				dynamic: 'team_list.id.name',
+				helpText: 'Pick from the list, or map an ID from an earlier step.',
+				_body: true,
+			},
+		],
+		spec: {
+			method: 'POST',
+			path: '/api/v1/social-account/connection-check',
+			params: [
+				{
+					key: 'jsonBody',
+					in: 'jsonBody',
+				},
+				{
+					key: 'type',
+					in: 'body',
+					to: 'type',
+				},
+				{
+					key: 'teamId',
+					in: 'body',
+					to: 'teamId',
+				},
+			],
+			body: 'json',
+			bodySwitch: true,
+		},
+		sample: {
+			success: false,
+			socialAccountId: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+			checkedAt: '2026-01-15T10:00:00.000Z',
+			limit: 1,
+			used: 1,
+			remaining: 1,
+			windowSeconds: 1,
+		},
+	},
+	{
+		key: 'social_account_set_channel',
+		type: 'create',
+		noun: 'Social Account',
+		label: 'Set Channel (Social Account)',
+		description: 'Selects the page, channel or organization a YouTube, Instagram, Facebook or LinkedIn account posts to.',
+		operationId: 'socialAccount.setChannel',
+		inputFields: [
+			{
+				key: 'bodyInput',
+				label: 'Specify Body',
+				type: 'string',
+				choices: [
+					{
+						value: 'fields',
+						label: 'Using fields below',
+						sample: 'fields',
+					},
+					{
+						value: 'json',
+						label: 'Using JSON',
+						sample: 'json',
+					},
+				],
+				altersDynamicFields: true,
+				default: 'fields',
+				helpText: 'Switch to **Using JSON** to send the raw request body, which is handy for automation flow definitions or when the body comes from an earlier step.',
+			},
+			{
+				key: 'type',
+				label: 'Type',
+				type: 'string',
+				required: true,
+				choices: [
+					{
+						value: 'FACEBOOK',
+						label: 'Facebook',
+						sample: 'FACEBOOK',
+					},
+					{
+						value: 'GOOGLE_BUSINESS',
+						label: 'Google Business Profile',
+						sample: 'GOOGLE_BUSINESS',
+					},
+					{
+						value: 'INSTAGRAM',
+						label: 'Instagram',
+						sample: 'INSTAGRAM',
+					},
+					{
+						value: 'LINKEDIN',
+						label: 'LinkedIn',
+						sample: 'LINKEDIN',
+					},
+					{
+						value: 'YOUTUBE',
+						label: 'YouTube',
+						sample: 'YOUTUBE',
+					},
+				],
+				_body: true,
+			},
+			{
+				key: 'teamId',
+				label: 'Team',
+				type: 'string',
+				required: true,
+				dynamic: 'team_list.id.name',
+				helpText: 'Pick from the list, or map an ID from an earlier step.',
+				_body: true,
+			},
+			{
+				key: 'channelId',
+				label: 'Channel ID',
+				type: 'string',
+				required: true,
+				_body: true,
+			},
+		],
+		spec: {
+			method: 'POST',
+			path: '/api/v1/social-account/set-channel',
+			params: [
+				{
+					key: 'jsonBody',
+					in: 'jsonBody',
+				},
+				{
+					key: 'type',
+					in: 'body',
+					to: 'type',
+				},
+				{
+					key: 'teamId',
+					in: 'body',
+					to: 'teamId',
+				},
+				{
+					key: 'channelId',
+					in: 'body',
+					to: 'channelId',
+				},
+			],
+			body: 'json',
+			bodySwitch: true,
+		},
+		sample: {
+			id: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+			type: 'TIKTOK',
+			teamId: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+			createdAt: '2026-01-15T10:00:00.000Z',
+			updatedAt: '2026-01-15T10:00:00.000Z',
+		},
+	},
+	{
+		key: 'social_account_unset_channel',
+		type: 'create',
+		noun: 'Social Account',
+		label: 'Unset Channel (Social Account)',
+		description: 'Clears the selected page, channel or organization of a social account, keeping its authorization.',
+		operationId: 'socialAccount.unsetChannel',
+		inputFields: [
+			{
+				key: 'bodyInput',
+				label: 'Specify Body',
+				type: 'string',
+				choices: [
+					{
+						value: 'fields',
+						label: 'Using fields below',
+						sample: 'fields',
+					},
+					{
+						value: 'json',
+						label: 'Using JSON',
+						sample: 'json',
+					},
+				],
+				altersDynamicFields: true,
+				default: 'fields',
+				helpText: 'Switch to **Using JSON** to send the raw request body, which is handy for automation flow definitions or when the body comes from an earlier step.',
+			},
+			{
+				key: 'type',
+				label: 'Type',
+				type: 'string',
+				required: true,
+				choices: [
+					{
+						value: 'FACEBOOK',
+						label: 'Facebook',
+						sample: 'FACEBOOK',
+					},
+					{
+						value: 'GOOGLE_BUSINESS',
+						label: 'Google Business Profile',
+						sample: 'GOOGLE_BUSINESS',
+					},
+					{
+						value: 'INSTAGRAM',
+						label: 'Instagram',
+						sample: 'INSTAGRAM',
+					},
+					{
+						value: 'LINKEDIN',
+						label: 'LinkedIn',
+						sample: 'LINKEDIN',
+					},
+					{
+						value: 'YOUTUBE',
+						label: 'YouTube',
+						sample: 'YOUTUBE',
+					},
+				],
+				_body: true,
+			},
+			{
+				key: 'teamId',
+				label: 'Team',
+				type: 'string',
+				required: true,
+				dynamic: 'team_list.id.name',
+				helpText: 'Pick from the list, or map an ID from an earlier step.',
+				_body: true,
+			},
+		],
+		spec: {
+			method: 'POST',
+			path: '/api/v1/social-account/unset-channel',
 			params: [
 				{
 					key: 'jsonBody',

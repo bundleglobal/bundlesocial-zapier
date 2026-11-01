@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Runs the integration locally against the real API with `zapier-platform invoke`.
 # Reads authData_apiKey, SMOKE_TEAM_ID, SMOKE_POST_ID and optional SMOKE_PLATFORM from .env.
-# Sections 1-3 only read. Section 4 creates a temporary team (with two uploads) and a DRAFT post,
-# then deletes both. Every published action and trigger is called at least once.
+# Sections 1-3 only read. Section 4 creates a temporary team (with uploads) and a DRAFT post, then
+# deletes both. Actions that change social accounts run against the empty temporary team and are
+# expected to fail there, which checks the request without touching a real account. Every published action and trigger is called at least once.
 #
 # Usage: bash scripts/smoke-test.sh [--read-only]
 set -uo pipefail
@@ -101,8 +102,8 @@ run ok auth test
 run ok auth label
 
 # Pick a platform connected in the team, preferring ones that accept text-only drafts.
+TEAM_JSON="$(curl -fsS -H "x-api-key: $authData_apiKey" "${BUNDLESOCIAL_BASE_URL:-https://api.bundle.social}/api/v1/team/$TEAM" 2>/dev/null)"
 if [ -z "${SMOKE_PLATFORM:-}" ]; then
-	TEAM_JSON="$(curl -fsS -H "x-api-key: $authData_apiKey" "${BUNDLESOCIAL_BASE_URL:-https://api.bundle.social}/api/v1/team/$TEAM" 2>/dev/null)"
 	TYPES="$(node -e 'const t = JSON.parse(require("fs").readFileSync(0, "utf8") || "{}"); console.log((t.socialAccounts || []).filter((s) => !s.deletedAt).map((s) => s.type).join(" "))' <<<"$TEAM_JSON" 2>/dev/null)"
 	for preferred in LINKEDIN TWITTER FACEBOOK THREADS BLUESKY MASTODON DISCORD SLACK; do
 		if [[ " $TYPES " == *" $preferred "* ]]; then SMOKE_PLATFORM="$preferred"; break; fi
@@ -110,6 +111,8 @@ if [ -z "${SMOKE_PLATFORM:-}" ]; then
 	[ -z "${SMOKE_PLATFORM:-}" ] && SMOKE_PLATFORM="$(awk '{print $1}' <<<"$TYPES")"
 fi
 PLATFORM="${SMOKE_PLATFORM:-}"
+# The account on that platform, for the per-account reads.
+ACCOUNT="$(node -e 'const t = JSON.parse(require("fs").readFileSync(0, "utf8") || "{}"); const a = (t.socialAccounts || []).find((s) => !s.deletedAt && s.type === process.argv[1]); console.log(a ? a.id : "")' "$PLATFORM" <<<"$TEAM_JSON" 2>/dev/null)"
 # Post analytics need the platform the post went out on.
 POST_JSON="$(curl -fsS -H "x-api-key: $authData_apiKey" "${BUNDLESOCIAL_BASE_URL:-https://api.bundle.social}/api/v1/post/$POST" 2>/dev/null)"
 POST_PLATFORM="$(node -e 'const p = JSON.parse(require("fs").readFileSync(0, "utf8") || "{}"); const d = p.data || {}; console.log(Object.keys(d).find((k) => d[k]) || "")' <<<"$POST_JSON" 2>/dev/null)"
@@ -117,11 +120,29 @@ echo "  team $TEAM, post $POST (${POST_PLATFORM:-unknown platform}), draft platf
 
 section "2. Triggers"
 run ok trigger team_list
+run ok trigger social_account_list "{\"teamId\":\"$TEAM\"}"
+run ok trigger upload_list "{\"teamId\":\"$TEAM\"}"
+run ok trigger new_team
+run ok trigger new_social_account "{\"teamId\":\"$TEAM\"}"
 run ok trigger post_published "{\"teamId\":\"$TEAM\"}"
 run ok trigger post_published "{\"teamId\":\"$TEAM\",\"platforms\":[\"${POST_PLATFORM:-LINKEDIN}\"]}"
 run ok trigger post_failed "{\"teamId\":\"$TEAM\"}"
 
-section "3. Analytics"
+section "3. Organization, teams, social accounts and uploads"
+run ok create organization_get
+run ok create organization_get_posts_usage
+run ok create organization_get_comments_usage
+run ok create organization_get_uploads_usage
+run ok create organization_get_imports_usage "{\"teamId\":\"$TEAM\"}"
+[ -n "$ACCOUNT" ] && run ok create organization_get_daily_limits_usage "{\"socialAccountId\":\"$ACCOUNT\"}"
+run ok create team_get_all
+run ok search team_get "{\"id\":\"$TEAM\"}"
+run empty search team_get '{"id":"00000000-0000-0000-0000-000000000000"}'
+[ -n "$PLATFORM" ] && run ok create social_account_get_by_type "{\"teamId\":\"$TEAM\",\"type\":\"$PLATFORM\"}"
+run ok create social_account_get_scheduled_for_deletion
+run ok create upload_get_all "{\"teamId\":\"$TEAM\",\"includePosts\":\"false\"}"
+
+section "3b. Analytics"
 [ -n "$POST_PLATFORM" ] && run ok create analytics_get_post_analytics "{\"postId\":\"$POST\",\"platformType\":\"$POST_PLATFORM\"}"
 [ -n "$PLATFORM" ] && run ok create analytics_get_social_account_analytics "{\"teamId\":\"$TEAM\",\"platformType\":\"$PLATFORM\"}"
 
@@ -132,16 +153,44 @@ else
 	TEMP_TEAM=""
 	NEW_POST=""
 
-	# A throwaway team holds the uploads; deleting it removes them too, since there is no upload delete action.
+	# A throwaway team holds the uploads; deleting it removes whatever the upload deletes leave behind.
 	run ok create team_create "{\"name\":\"Zapier smoke test $(date +%s)\"}"
 	TEMP_TEAM="$(json id 2>/dev/null || true)"
 	if [ -n "$TEMP_TEAM" ]; then
+		run ok create team_update "{\"id\":\"$TEMP_TEAM\",\"name\":\"Zapier smoke test (renamed)\"}"
 		run ok create upload_upload_from_url "{\"teamId\":\"$TEMP_TEAM\",\"url\":\"https://picsum.photos/id/237/1080/1080.jpg\"}"
+		UPLOAD_A="$(json id 2>/dev/null || true)"
 		run ok create upload_upload_file "{\"teamId\":\"$TEMP_TEAM\",\"file\":\"https://picsum.photos/id/238/600/600.jpg\"}"
+		UPLOAD_B="$(json id 2>/dev/null || true)"
+		run ok create upload_upload_large_file "{\"teamId\":\"$TEMP_TEAM\",\"file\":\"https://picsum.photos/id/239/1200/1200.jpg\"}"
+		UPLOAD_C="$(json id 2>/dev/null || true)"
+		[ -n "$UPLOAD_A" ] && run ok search upload_get "{\"id\":\"$UPLOAD_A\"}"
+		[ -n "$UPLOAD_A" ] && run ok create upload_delete "{\"id\":\"$UPLOAD_A\"}"
+		[ -n "$UPLOAD_B" ] && [ -n "$UPLOAD_C" ] && run ok create upload_delete_many_uploads "{\"ids\":[\"$UPLOAD_B\",\"$UPLOAD_C\"]}"
+		# The low-level steps: start uploads and drop them without sending a file.
+		run ok create upload_initialize_large_upload "{\"teamId\":\"$TEMP_TEAM\",\"fileName\":\"smoke.mp4\",\"mimeType\":\"video/mp4\",\"fileSize\":200000000}"
+		run error create upload_finalize_large_upload "{\"teamId\":\"$TEMP_TEAM\",\"path\":\"missing/smoke.mp4\"}"
+		run ok create upload_initialize_multipart_upload "{\"teamId\":\"$TEMP_TEAM\",\"fileName\":\"smoke.mp4\",\"mimeType\":\"video/mp4\",\"fileSize\":200000000}"
+		MP_PATH="$(json path 2>/dev/null || true)"
+		MP_ID="$(json uploadId 2>/dev/null || true)"
+		if [ -n "$MP_PATH" ] && [ -n "$MP_ID" ]; then
+			run ok create upload_sign_multipart_upload_parts "{\"teamId\":\"$TEMP_TEAM\",\"path\":\"$MP_PATH\",\"uploadId\":\"$MP_ID\",\"partNumbers\":[1]}"
+			run error create upload_complete_multipart_upload "{\"teamId\":\"$TEMP_TEAM\",\"path\":\"$MP_PATH\",\"uploadId\":\"$MP_ID\",\"parts\":[{\"partNumber\":1,\"etag\":\"missing\"}]}"
+			run ok create upload_abort_multipart_upload "{\"teamId\":\"$TEMP_TEAM\",\"path\":\"$MP_PATH\",\"uploadId\":\"$MP_ID\"}"
+		fi
+		run ok create social_account_create_portal_link "{\"teamId\":\"$TEMP_TEAM\",\"socialAccountTypes\":[\"LINKEDIN\"],\"redirectUrl\":\"https://bundle.social\"}"
 		# A team holds one account per network, so the connect link is requested for the empty temporary team.
 		run ok create social_account_connect "{\"teamId\":\"$TEMP_TEAM\",\"type\":\"LINKEDIN\",\"redirectUrl\":\"https://bundle.social\"}"
 		# The temporary team has no accounts, so this checks the request shape and the readable API error.
 		run error create social_account_disconnect "{\"teamId\":\"$TEMP_TEAM\",\"type\":\"${PLATFORM:-LINKEDIN}\"}"
+		run error create social_account_run_connection_check "{\"teamId\":\"$TEMP_TEAM\",\"type\":\"LINKEDIN\"}"
+		run error create social_account_refresh_profile "{\"teamId\":\"$TEMP_TEAM\",\"type\":\"LINKEDIN\"}"
+		run error create social_account_refresh_channels "{\"teamId\":\"$TEMP_TEAM\",\"type\":\"PINTEREST\"}"
+		run error create social_account_set_channel "{\"teamId\":\"$TEMP_TEAM\",\"type\":\"LINKEDIN\",\"channelId\":\"missing\"}"
+		run error create social_account_unset_channel "{\"teamId\":\"$TEMP_TEAM\",\"type\":\"LINKEDIN\"}"
+		run error create social_account_enable_messaging "{\"teamId\":\"$TEMP_TEAM\",\"type\":\"INSTAGRAM\"}"
+		run error create social_account_disable_messaging "{\"teamId\":\"$TEMP_TEAM\",\"type\":\"INSTAGRAM\"}"
+		run error create social_account_copy "{\"fromTeamId\":\"$TEMP_TEAM\",\"toTeamId\":\"$TEMP_TEAM\",\"socialAccountTypes\":[\"LINKEDIN\"]}"
 	fi
 
 	if [ -n "$PLATFORM" ]; then

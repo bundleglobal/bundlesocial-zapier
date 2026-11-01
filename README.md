@@ -24,10 +24,11 @@ The key is only ever sent to `https://api.bundle.social`, never to the hosts fil
 
 ## Usage
 
-- **Team** fields are dropdowns loaded from your organization; you can also map a team ID from an earlier step.
+- **Team**, **Social Account** and **Upload** fields are dropdowns loaded from your organization; you can also map an ID from an earlier step.
 - **Connect Social Account** returns a URL. Open it to sign in to the social network and the account is connected to the team.
 - **Create Post** has one settings section per platform (*TikTok Settings*, *Instagram Settings*, ...). Only the sections of the platforms picked in **Social Account Types** are shown. When that field is mapped from an earlier step, every section is shown.
 - Media goes in two steps: upload it with **Upload File** (a file from an earlier step, or a URL) or **Upload From URL**, then map the returned `id` into **Upload IDs** of the post. **Upload From URL** is the best fit for public links and long videos, because bundle.social downloads the file itself.
+- **Upload File** takes files up to 90 MB. **Upload Large File** takes files up to 5 GB: it sends the file straight to storage and adds it to the media library in one step. The *Initialize*, *Finalize* and *Multipart* upload actions expose the individual steps for files above 5 GB or custom flows.
 - **Get Post Analytics** takes the **Post ID** together with the **Platform Type** the post went out on.
 - Every action with a request body has **Specify Body**. Switch it to **Using JSON** to send the raw request body, which is handy when the body comes from an earlier step.
 - Validation errors from the API list each invalid field, for example `data.TIKTOK.text: Required`.
@@ -59,27 +60,60 @@ Triggers check bundle.social on Zapier's polling interval.
 |---|---|---|
 | Post Published | a post finishes publishing | `GET /api/v1/post/?status=POSTED` |
 | Post Failed | a post fails to publish | `GET /api/v1/post/?status=ERROR` |
+| New Team | a team is created in your organization | `GET /api/v1/team/` |
+| New Social Account | a social account is connected to a team | `GET /api/v1/team/` |
 
-Both can be narrowed to posts on specific platforms.
+The post triggers can be narrowed to posts on specific platforms, New Social Account to one team.
 
 ## Actions
 
 <!-- actions:start -->
 
-10 actions, generated from the bundle.social OpenAPI spec.
+41 actions, generated from the bundle.social OpenAPI spec.
 
 | Action | What it does | Endpoint |
 |---|---|---|
 | Get Post Analytics | Retrieves engagement metrics such as likes, comments, shares and views for a published post. | `GET /api/v1/analytics/post` |
 | Get Social Account Analytics | Retrieves profile metrics such as followers, reach and impressions for a connected social account. | `GET /api/v1/analytics/social-account` |
+| Get Comments Usage (Organization) | Retrieves how many comments your organization has used against its plan limit this billing period. | `GET /api/v1/organization/usage/comments` |
+| Get Daily Limits Usage (Organization) | Retrieves how many posts a social account has published on a given day against the network's daily cap. | `GET /api/v1/organization/usage/daily-limits` |
+| Get Imports Usage (Organization) | Retrieves the post history import usage of each social account, by team or platform. | `GET /api/v1/organization/usage/imports` |
+| Get Organization | Retrieves your bundle.social organization with its plan details. | `GET /api/v1/organization/` |
+| Get Posts Usage (Organization) | Retrieves how many posts your organization has used against its plan limit this billing period. | `GET /api/v1/organization/usage/posts` |
+| Get Uploads Usage (Organization) | Retrieves how much upload capacity your organization has used against its plan limit this billing period. | `GET /api/v1/organization/usage/uploads` |
 | Create Post | Schedules a post, or publishes it right away, to one or more connected social accounts. | `POST /api/v1/post/` |
 | Delete Post | Permanently deletes a post from bundle.social. | `DELETE /api/v1/post/{id}` |
 | Connect Social Account | Generates the link that connects a social account to a team. Open the returned URL to sign in to the network and finish connecting. | `POST /api/v1/social-account/connect` |
+| Copy Social Account | Copies connected social accounts from one team to another, reusing their authorization without signing in again. | `POST /api/v1/social-account/copy` |
+| Create Portal Link (Social Account) | Generates a hosted portal link where your users connect and manage the social accounts of a team themselves. | `POST /api/v1/social-account/create-portal-link` |
+| Disable Messaging (Social Account) | Turns off direct message processing for the Facebook page or Instagram account of a team. | `POST /api/v1/social-account/messaging/disable` |
 | Disconnect Social Account | Disconnects a social account from a team and removes it from all scheduled posts. | `DELETE /api/v1/social-account/disconnect` |
+| Enable Messaging (Social Account) | Turns on direct message processing for the Facebook page or Instagram account of a team. Requires DM access for your organization. | `POST /api/v1/social-account/messaging/enable` |
+| Get Scheduled for Deletion (Social Account) | Lists the social accounts queued for permanent deletion. | `GET /api/v1/social-account/to-delete` |
+| Get Social Account by Type | Retrieves the team's connected social account on the selected network. | `GET /api/v1/social-account/by-type` |
+| Refresh Channels (Social Account) | Reloads the channels available to a Reddit, Discord, Slack or Pinterest account from the network. | `POST /api/v1/social-account/refresh-channels` |
+| Refresh Profile (Social Account) | Updates the profile name, handle and avatar of a social account from the network. | `POST /api/v1/social-account/profile-refresh` |
+| Run Connection Check (Social Account) | Checks right away whether a social account is still authorized, so an expired connection shows up before a post fails. | `POST /api/v1/social-account/connection-check` |
+| Set Channel (Social Account) | Selects the page, channel or organization a YouTube, Instagram, Facebook or LinkedIn account posts to. | `POST /api/v1/social-account/set-channel` |
+| Unset Channel (Social Account) | Clears the selected page, channel or organization of a social account, keeping its authorization. | `POST /api/v1/social-account/unset-channel` |
 | Create Team | Creates a new team in your bundle.social organization. | `POST /api/v1/team/` |
 | Delete Team | Permanently deletes a team along with its connected social accounts, posts and uploads. | `DELETE /api/v1/team/{id}` |
+| Find Team | Finds a team by ID, with its connected social accounts and settings. | `GET /api/v1/team/{id}` |
+| Get Many Teams | Returns many teams. Paging is handled for you. | `GET /api/v1/team/` |
+| Update Team | Updates a team's name or avatar. Fields left empty keep their current value. | `PATCH /api/v1/team/{id}` |
+| Abort Multipart Upload | Discards an unfinished multipart upload and the parts already sent. | `POST /api/v1/upload/multipart/abort` |
+| Complete Multipart Upload | Assembles the uploaded parts of a multipart upload and adds the file to the media library. | `POST /api/v1/upload/multipart/complete` |
+| Delete Many Uploads | Permanently deletes several media files from the media library at once. | `DELETE /api/v1/upload/` |
+| Delete Upload | Permanently deletes a media file from the media library. | `DELETE /api/v1/upload/{id}` |
+| Finalize Large Upload | Adds a file sent to the signed URL of Initialize Large Upload to the media library. | `POST /api/v1/upload/finalize` |
+| Find Upload | Finds a media file by ID, with its processing status, dimensions, duration and the posts using it. | `GET /api/v1/upload/{id}` |
+| Get Many Uploads | Returns many uploads. Paging is handled for you. | `GET /api/v1/upload/` |
+| Initialize Large Upload | Starts an upload of a file over 90 MB and returns the signed URL to send the file to. Upload Large File does every step for you. | `POST /api/v1/upload/init` |
+| Initialize Multipart Upload | Starts an upload of a file over 5 GB in parts and returns one signed URL per part. Upload Large File covers files up to 5 GB. | `POST /api/v1/upload/multipart/init` |
+| Sign Multipart Upload Parts | Issues new signed URLs for parts of a multipart upload whose URLs expired. | `POST /api/v1/upload/multipart/sign` |
 | Upload File | Uploads an image, video or document of up to 90 MB to the media library, for use in posts. | `POST /api/v1/upload/` |
 | Upload From URL | Adds an image or video to the media library from a public URL, for use in posts. | `POST /api/v1/upload/from-url` |
+| Upload Large File | Uploads a file of up to 5 GB, such as a long video, to the media library: sends the file straight to storage and adds it for use in posts. | `POST /api/v1/upload/init, then storage PUT, then /api/v1/upload/finalize` |
 
 <!-- actions:end -->
 
