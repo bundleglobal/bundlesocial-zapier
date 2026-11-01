@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.1.0...v1.2.0) (2026-11-01)
+
+
+### Features
+
+* post and post history import actions ([#3](https://github.com/bundleglobal/bundlesocial-zapier/issues/3)) ([bdfa7f3](https://github.com/bundleglobal/bundlesocial-zapier/commit/bdfa7f329ef81531ba7a01042b106f3cd797166f))
+
 # [1.1.0](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.0.2...v1.1.0) (2026-11-01)
 
 
