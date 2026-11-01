@@ -3,6 +3,7 @@ module.exports = [
 	...require('./analytics'),
 	...require('./organization'),
 	...require('./post'),
+	...require('./postHistoryImport'),
 	...require('./socialAccount'),
 	...require('./team'),
 	...require('./upload'),

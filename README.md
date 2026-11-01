@@ -29,6 +29,7 @@ The key is only ever sent to `https://api.bundle.social`, never to the hosts fil
 - **Create Post** has one settings section per platform (*TikTok Settings*, *Instagram Settings*, ...). Only the sections of the platforms picked in **Social Account Types** are shown. When that field is mapped from an earlier step, every section is shown.
 - Media goes in two steps: upload it with **Upload File** (a file from an earlier step, or a URL) or **Upload From URL**, then map the returned `id` into **Upload IDs** of the post. **Upload From URL** is the best fit for public links and long videos, because bundle.social downloads the file itself.
 - **Upload File** takes files up to 90 MB. **Upload Large File** takes files up to 5 GB: it sends the file straight to storage and adds it to the media library in one step. The *Initialize*, *Finalize* and *Multipart* upload actions expose the individual steps for files above 5 GB or custom flows.
+- **Update Post** shows the settings of every platform: changing **Social Account Types** there changes the platforms of the post, so it does not hide sections. Fields left empty keep their current value.
 - **Get Post Analytics** takes the **Post ID** together with the **Platform Type** the post went out on.
 - Every action with a request body has **Specify Body**. Switch it to **Using JSON** to send the raw request body, which is handy when the body comes from an earlier step.
 - Validation errors from the API list each invalid field, for example `data.TIKTOK.text: Required`.
@@ -58,18 +59,19 @@ Triggers check bundle.social on Zapier's polling interval.
 
 | Trigger | Fires when | Endpoint |
 |---|---|---|
+| New Post | a post is created in a team | `GET /api/v1/post/?orderBy=createdAt` |
 | Post Published | a post finishes publishing | `GET /api/v1/post/?status=POSTED` |
 | Post Failed | a post fails to publish | `GET /api/v1/post/?status=ERROR` |
 | New Team | a team is created in your organization | `GET /api/v1/team/` |
 | New Social Account | a social account is connected to a team | `GET /api/v1/team/` |
 
-The post triggers can be narrowed to posts on specific platforms, New Social Account to one team.
+The post triggers can be narrowed to posts on specific platforms (New Post also to a status), New Social Account to one team.
 
 ## Actions
 
 <!-- actions:start -->
 
-41 actions, generated from the bundle.social OpenAPI spec.
+54 actions, generated from the bundle.social OpenAPI spec.
 
 | Action | What it does | Endpoint |
 |---|---|---|
@@ -83,6 +85,19 @@ The post triggers can be narrowed to posts on specific platforms, New Social Acc
 | Get Uploads Usage (Organization) | Retrieves how much upload capacity your organization has used against its plan limit this billing period. | `GET /api/v1/organization/usage/uploads` |
 | Create Post | Schedules a post, or publishes it right away, to one or more connected social accounts. | `POST /api/v1/post/` |
 | Delete Post | Permanently deletes a post from bundle.social. | `DELETE /api/v1/post/{id}` |
+| Find Post | Finds a post by ID, with its per-platform status, scheduled time, media and publishing errors. | `GET /api/v1/post/{id}` |
+| Find Post by Reference Key | Finds a post by the reference key you gave it when creating it. | `GET /api/v1/post/reference-key/{referenceKey}` |
+| Get Many Posts | Returns many posts. Paging is handled for you. | `GET /api/v1/post/` |
+| Get Reconnect Candidates (Post) | Lists the posts that lost their social account when it was disconnected and can be moved to a newly connected account of the same network. | `GET /api/v1/post/reconnect-social-account/candidates` |
+| Reconnect Social Account (Post) | Moves posts that lost their social account to the team's newly connected account of the same network, so scheduled posts publish instead of failing. | `POST /api/v1/post/reconnect-social-account` |
+| Retry Post | Publishes a failed post again, for example after reconnecting an expired account. | `POST /api/v1/post/{id}/retry` |
+| Update Post | Updates the content, media, scheduled time or platforms of a post that has not been published yet. Fields left empty keep their current value. | `PATCH /api/v1/post/{id}` |
+| Create Post History Import | Starts importing the posts a social account published before it was connected, together with their analytics. | `POST /api/v1/post-history-import/` |
+| Delete Imported Posts (Post History Import) | Permanently deletes up to 100 imported posts and their analytics, freeing import capacity. | `DELETE /api/v1/post-history-import/posts` |
+| Find Post History Import | Finds a post history import by ID, with its status, progress and result. | `GET /api/v1/post-history-import/{importId}` |
+| Get Imported Posts (Post History Import) | Lists the posts imported for a social account with their analytics, and the import capacity left. | `GET /api/v1/post-history-import/posts` |
+| Get Many Post History Imports | Lists the post history imports of a team with their status. | `GET /api/v1/post-history-import/` |
+| Retry Post History Import | Runs a failed post history import again. | `POST /api/v1/post-history-import/{importId}/retry` |
 | Connect Social Account | Generates the link that connects a social account to a team. Open the returned URL to sign in to the network and finish connecting. | `POST /api/v1/social-account/connect` |
 | Copy Social Account | Copies connected social accounts from one team to another, reusing their authorization without signing in again. | `POST /api/v1/social-account/copy` |
 | Create Portal Link (Social Account) | Generates a hosted portal link where your users connect and manage the social accounts of a team themselves. | `POST /api/v1/social-account/create-portal-link` |

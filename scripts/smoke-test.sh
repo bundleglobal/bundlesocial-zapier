@@ -124,6 +124,7 @@ run ok trigger social_account_list "{\"teamId\":\"$TEAM\"}"
 run ok trigger upload_list "{\"teamId\":\"$TEAM\"}"
 run ok trigger new_team
 run ok trigger new_social_account "{\"teamId\":\"$TEAM\"}"
+run ok trigger new_post "{\"teamId\":\"$TEAM\"}"
 run ok trigger post_published "{\"teamId\":\"$TEAM\"}"
 run ok trigger post_published "{\"teamId\":\"$TEAM\",\"platforms\":[\"${POST_PLATFORM:-LINKEDIN}\"]}"
 run ok trigger post_failed "{\"teamId\":\"$TEAM\"}"
@@ -141,6 +142,14 @@ run empty search team_get '{"id":"00000000-0000-0000-0000-000000000000"}'
 [ -n "$PLATFORM" ] && run ok create social_account_get_by_type "{\"teamId\":\"$TEAM\",\"type\":\"$PLATFORM\"}"
 run ok create social_account_get_scheduled_for_deletion
 run ok create upload_get_all "{\"teamId\":\"$TEAM\",\"includePosts\":\"false\"}"
+run ok create post_get_all "{\"teamId\":\"$TEAM\"}"
+run ok search post_get "{\"id\":\"$POST\"}"
+run empty search post_get_by_reference_key '{"referenceKey":"zapier-smoke-missing"}'
+[ -n "$PLATFORM" ] && run ok create post_get_reconnect_candidates "{\"teamId\":\"$TEAM\",\"type\":\"$PLATFORM\"}"
+run ok create post_history_import_get_all "{\"teamId\":\"$TEAM\"}"
+IMPORT="$(json imports.0.id 2>/dev/null || true)"
+[ -n "$IMPORT" ] && run ok search post_history_import_get "{\"importId\":\"$IMPORT\"}"
+[ -n "$PLATFORM" ] && run ok create post_history_import_get_imported_posts "{\"teamId\":\"$TEAM\",\"socialAccountType\":\"$PLATFORM\"}"
 
 section "3b. Analytics"
 [ -n "$POST_PLATFORM" ] && run ok create analytics_get_post_analytics "{\"postId\":\"$POST\",\"platformType\":\"$POST_PLATFORM\"}"
@@ -190,12 +199,23 @@ else
 		run error create social_account_unset_channel "{\"teamId\":\"$TEMP_TEAM\",\"type\":\"LINKEDIN\"}"
 		run error create social_account_enable_messaging "{\"teamId\":\"$TEMP_TEAM\",\"type\":\"INSTAGRAM\"}"
 		run error create social_account_disable_messaging "{\"teamId\":\"$TEMP_TEAM\",\"type\":\"INSTAGRAM\"}"
+		# Post actions that could publish or import on a real account run against the empty team or a missing ID.
+		run error create post_reconnect_social_account "{\"teamId\":\"$TEMP_TEAM\",\"type\":\"LINKEDIN\"}"
+		run error create post_history_import_create "{\"teamId\":\"$TEMP_TEAM\",\"socialAccountType\":\"LINKEDIN\",\"count\":10}"
+		run error create post_history_import_retry "{\"importId\":\"00000000-0000-0000-0000-000000000000\",\"teamId\":\"$TEMP_TEAM\"}"
+		run ok create post_history_import_delete_imported_posts "{\"teamId\":\"$TEMP_TEAM\",\"postIds\":[\"00000000-0000-0000-0000-000000000000\"]}"
+		run error create post_retry '{"id":"00000000-0000-0000-0000-000000000000"}'
 		run error create social_account_copy "{\"fromTeamId\":\"$TEMP_TEAM\",\"toTeamId\":\"$TEMP_TEAM\",\"socialAccountTypes\":[\"LINKEDIN\"]}"
 	fi
 
 	if [ -n "$PLATFORM" ]; then
-		run ok create post_create "{\"teamId\":\"$TEAM\",\"title\":\"Zapier smoke test\",\"postDate\":\"2026-12-01T10:00:00Z\",\"status\":\"DRAFT\",\"socialAccountTypes\":[\"$PLATFORM\"],\"data__${PLATFORM}__text\":\"Zapier smoke test\"}"
+		REF="zapier-smoke-$(date +%s)"
+		run ok create post_create "{\"teamId\":\"$TEAM\",\"referenceKey\":\"$REF\",\"title\":\"Zapier smoke test\",\"postDate\":\"2026-12-01T10:00:00Z\",\"status\":\"DRAFT\",\"socialAccountTypes\":[\"$PLATFORM\"],\"data__${PLATFORM}__text\":\"Zapier smoke test\"}"
 		NEW_POST="$(json id 2>/dev/null || true)"
+		if [ -n "$NEW_POST" ]; then
+			run ok search post_get_by_reference_key "{\"referenceKey\":\"$REF\"}"
+			run ok create post_update "{\"id\":\"$NEW_POST\",\"title\":\"Zapier smoke test (updated)\",\"data__${PLATFORM}__text\":\"Zapier smoke test (updated)\"}"
+		fi
 		run error create post_create "{\"teamId\":\"$TEAM\",\"title\":\"x\",\"postDate\":\"not-a-date\",\"status\":\"DRAFT\",\"socialAccountTypes\":[\"$PLATFORM\"]}"
 	else
 		echo "  No social account in the team: skipping Create Post."

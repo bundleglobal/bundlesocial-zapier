@@ -21,7 +21,7 @@ const DEFAULT_LIMIT = '50';
 const MAX_LABEL = 64;
 const MAX_HELP_TEXT = 1000;
 // Operations the integration exposes as Zapier actions: the publishing workflow from team setup to analytics,
-// plus organization, team, social account and upload management.
+// plus organization, team, social account, post, post history import and upload management.
 const PUBLISHED_OPERATIONS = new Set([
 	'organization.getOrganization',
 	'organization.getPostsUsage',
@@ -48,7 +48,20 @@ const PUBLISHED_OPERATIONS = new Set([
 	'socialAccount.disableMessaging',
 	'socialAccount.getAccountsToDelete',
 	'post.create',
+	'post.get',
+	'post.getByReferenceKey',
+	'post.getList',
+	'post.update',
+	'post.retry',
 	'post.delete',
+	'post.getReconnectSocialAccountCandidates',
+	'post.reconnectSocialAccount',
+	'postImport.create',
+	'postImport.getStatus',
+	'postImport.getById',
+	'postImport.retryImport',
+	'postImport.getImportedPosts',
+	'postImport.deleteImportedPosts',
 	'upload.create',
 	'upload.createFromUrl',
 	'upload.get',
@@ -101,7 +114,25 @@ const ACTION_DESCRIPTIONS = {
 	'socialAccount.disableMessaging': 'Turns off direct message processing for the Facebook page or Instagram account of a team.',
 	'socialAccount.getAccountsToDelete': 'Lists the social accounts queued for permanent deletion.',
 	'post.create': 'Schedules a post, or publishes it right away, to one or more connected social accounts.',
+	'post.get': 'Finds a post by ID, with its per-platform status, scheduled time, media and publishing errors.',
+	'post.getByReferenceKey': 'Finds a post by the reference key you gave it when creating it.',
+	'post.update':
+		'Updates the content, media, scheduled time or platforms of a post that has not been published yet. Fields left empty keep their current value.',
+	'post.retry': 'Publishes a failed post again, for example after reconnecting an expired account.',
 	'post.delete': 'Permanently deletes a post from bundle.social.',
+	'post.getReconnectSocialAccountCandidates':
+		'Lists the posts that lost their social account when it was disconnected and can be moved to a newly connected account of the same network.',
+	'post.reconnectSocialAccount':
+		"Moves posts that lost their social account to the team's newly connected account of the same network, so scheduled posts publish instead of failing.",
+	'postImport.create':
+		'Starts importing the posts a social account published before it was connected, together with their analytics.',
+	'postImport.getStatus': 'Lists the post history imports of a team with their status.',
+	'postImport.getById': 'Finds a post history import by ID, with its status, progress and result.',
+	'postImport.retryImport': 'Runs a failed post history import again.',
+	'postImport.getImportedPosts':
+		'Lists the posts imported for a social account with their analytics, and the import capacity left.',
+	'postImport.deleteImportedPosts':
+		'Permanently deletes up to 100 imported posts and their analytics, freeing import capacity.',
 	'upload.create': 'Uploads an image, video or document of up to 90 MB to the media library, for use in posts.',
 	'upload.createFromUrl': 'Adds an image or video to the media library from a public URL, for use in posts.',
 	'upload.get': 'Finds a media file by ID, with its processing status, dimensions, duration and the posts using it.',
@@ -171,6 +202,7 @@ const RESOURCES = {
 	analytics: { name: 'Analytics', plural: 'analytics' },
 	organization: { name: 'Organization' },
 	post: { name: 'Post', plural: 'posts' },
+	postHistoryImport: { name: 'Post History Import', plural: 'post history imports' },
 	socialAccount: { name: 'Social Account', plural: 'social accounts' },
 	team: { name: 'Team', plural: 'teams' },
 	upload: { name: 'Upload', plural: 'uploads' },
@@ -189,6 +221,12 @@ const OPERATION_NAMES = {
 	'socialAccount.getByType': 'Get by Type',
 	'socialAccount.getAccountsToDelete': 'Get Scheduled for Deletion',
 	'post.getList': GET_MANY,
+	'post.getByReferenceKey': 'Get by Reference Key',
+	'post.getReconnectSocialAccountCandidates': 'Get Reconnect Candidates',
+	'postImport.create': 'Create',
+	'postImport.getStatus': GET_MANY,
+	'postImport.getById': 'Get',
+	'postImport.retryImport': 'Retry',
 	'upload.getList': GET_MANY,
 	'upload.create': 'Upload File',
 	'upload.createFromUrl': 'Upload From URL',

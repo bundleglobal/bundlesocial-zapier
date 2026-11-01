@@ -207,6 +207,91 @@ describe('creates', () => {
 	});
 });
 
+describe('post actions', () => {
+	it('pages through Get Many Posts with Return All', async () => {
+		nock(API)
+			.get('/api/v1/post/')
+			.query({ teamId: 'team-1', offset: '0', limit: '100' })
+			.reply(200, { items: [{ id: 'a' }, { id: 'b' }], total: 3 })
+			.get('/api/v1/post/')
+			.query({ teamId: 'team-1', offset: '2', limit: '100' })
+			.reply(200, { items: [{ id: 'c' }], total: 3 });
+
+		const result = await appTester(App.creates.post_get_all.operation.perform, {
+			authData,
+			inputData: { teamId: 'team-1', returnAll: 'true' },
+		});
+
+		expect(result).toEqual({ items: [{ id: 'a' }, { id: 'b' }, { id: 'c' }], total: 3 });
+	});
+
+	it('sends only the post fields that are set on update', async () => {
+		nock(API)
+			.patch('/api/v1/post/post-1', { title: 'New title', data: { TIKTOK: { text: 'New text' } } })
+			.reply(200, { id: 'post-1' });
+
+		const result = await appTester(App.creates.post_update.operation.perform, {
+			authData,
+			inputData: { id: 'post-1', title: 'New title', data__TIKTOK__text: 'New text' },
+		});
+
+		expect(result).toEqual({ id: 'post-1' });
+	});
+
+	it('retries a failed post', async () => {
+		nock(API).post('/api/v1/post/post-1/retry').reply(200, { id: 'post-1', status: 'SCHEDULED' });
+
+		const result = await appTester(App.creates.post_retry.operation.perform, {
+			authData,
+			inputData: { id: 'post-1' },
+		});
+
+		expect(result).toEqual({ id: 'post-1', status: 'SCHEDULED' });
+	});
+
+	it('starts a post history import', async () => {
+		nock(API)
+			.post('/api/v1/post-history-import/', {
+				teamId: 'team-1',
+				socialAccountType: 'INSTAGRAM',
+				count: 50,
+				withAnalytics: true,
+			})
+			.reply(200, { id: 'imp-1', status: 'PENDING' });
+
+		const result = await appTester(App.creates.post_history_import_create.operation.perform, {
+			authData,
+			inputData: { teamId: 'team-1', socialAccountType: 'INSTAGRAM', count: '50', withAnalytics: 'true' },
+		});
+
+		expect(result).toEqual({ id: 'imp-1', status: 'PENDING' });
+	});
+
+	it('retries a post history import with the team in the body', async () => {
+		nock(API).post('/api/v1/post-history-import/imp-1/retry', { teamId: 'team-1' }).reply(200, { id: 'imp-1' });
+
+		const result = await appTester(App.creates.post_history_import_retry.operation.perform, {
+			authData,
+			inputData: { importId: 'imp-1', teamId: 'team-1' },
+		});
+
+		expect(result).toEqual({ id: 'imp-1' });
+	});
+
+	it('deletes imported posts by ID', async () => {
+		nock(API)
+			.delete('/api/v1/post-history-import/posts', { teamId: 'team-1', postIds: ['ip-1', 'ip-2'] })
+			.reply(200, { deleted: 2 });
+
+		const result = await appTester(App.creates.post_history_import_delete_imported_posts.operation.perform, {
+			authData,
+			inputData: { teamId: 'team-1', postIds: ['ip-1', 'ip-2'] },
+		});
+
+		expect(result).toEqual({ deleted: 2 });
+	});
+});
+
 describe('searches', () => {
 	it('returns the record in a list', async () => {
 		nock(API).get('/api/v1/team/team-1').reply(200, { id: 'team-1' });
@@ -217,6 +302,17 @@ describe('searches', () => {
 		});
 
 		expect(result).toEqual([{ id: 'team-1' }]);
+	});
+
+	it('finds a post by its reference key', async () => {
+		nock(API).get('/api/v1/post/reference-key/order-42').reply(200, { id: 'post-1', referenceKey: 'order-42' });
+
+		const result = await appTester(App.searches.post_get_by_reference_key.operation.perform, {
+			authData,
+			inputData: { referenceKey: 'order-42' },
+		});
+
+		expect(result).toEqual([{ id: 'post-1', referenceKey: 'order-42' }]);
 	});
 
 	it('returns an empty list when the record does not exist', async () => {
@@ -281,6 +377,20 @@ describe('triggers', () => {
 		});
 
 		expect(result).toEqual([{ id: 'p1' }]);
+	});
+
+	it('polls new posts by creation date, filtered by status', async () => {
+		nock(API)
+			.get('/api/v1/post/')
+			.query({ teamId: 'team-1', status: 'SCHEDULED', orderBy: 'createdAt', order: 'DESC', offset: '0', limit: '100' })
+			.reply(200, { items: [{ id: 'p3' }], total: 1 });
+
+		const result = await appTester(App.triggers.new_post.operation.perform, {
+			authData,
+			inputData: { teamId: 'team-1', status: 'SCHEDULED' },
+		});
+
+		expect(result).toEqual([{ id: 'p3' }]);
 	});
 
 	it('polls failed posts by last update', async () => {
