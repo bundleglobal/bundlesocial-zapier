@@ -24,6 +24,7 @@ function postTrigger({ key, label, description, status, orderBy }) {
 		operation: {
 			inputFields: [
 				fieldOf('teamId'),
+				...(status ? [] : [fieldOf('status', { helpText: 'Only trigger on posts with this status.' })]),
 				fieldOf('platforms', {
 					helpText: 'Only trigger on posts to these platforms. Leave empty for all platforms.',
 				}),
@@ -32,7 +33,7 @@ function postTrigger({ key, label, description, status, orderBy }) {
 				const data = await apiRequest(z, bundle, 'GET', '/api/v1/post/', {
 					params: {
 						teamId: bundle.inputData.teamId,
-						status,
+						status: status || bundle.inputData.status,
 						platforms: bundle.inputData.platforms,
 						orderBy,
 						order: 'DESC',
@@ -42,10 +43,17 @@ function postTrigger({ key, label, description, status, orderBy }) {
 				});
 				return (data && data.items) || [];
 			},
-			sample: { ...sources.post_get_all.sample.items[0], status },
+			sample: { ...sources.post_get_all.sample.items[0], ...(status ? { status } : {}) },
 		},
 	};
 }
+
+const newPost = postTrigger({
+	key: 'new_post',
+	label: 'New Post',
+	description: 'Triggers when a post is created in a team.',
+	orderBy: 'createdAt',
+});
 
 const postPublished = postTrigger({
 	key: 'post_published',
@@ -101,4 +109,4 @@ const newSocialAccount = {
 	},
 };
 
-module.exports = { postPublished, postFailed, newTeam, newSocialAccount };
+module.exports = { newPost, postPublished, postFailed, newTeam, newSocialAccount };
