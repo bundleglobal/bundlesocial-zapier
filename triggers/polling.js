@@ -8,13 +8,18 @@ const POLL_SIZE = 100;
 
 const byKey = Object.fromEntries(operations.map((op) => [op.key, op]));
 
-// Triggers reuse the generated fields (team dropdown, platform choices) and sample of the post list.
-function fieldOf(fieldKey, overrides = {}) {
-	const field = sources.post_get_all.inputFields.find((entry) => entry.key === fieldKey);
-	if (!field) throw new Error(`Generated post list has no field ${fieldKey}`);
+// Triggers reuse the generated fields (dropdowns, platform choices) and samples of the matching list actions.
+function fieldFrom(fields, where, fieldKey, overrides) {
+	const field = fields.find((entry) => entry.key === fieldKey);
+	if (!field) throw new Error(`${where} has no field ${fieldKey}`);
 	const plain = Object.fromEntries(Object.entries(field).filter(([key]) => !key.startsWith('_') && key !== 'group'));
 	return { ...plain, ...overrides };
 }
+
+const fieldOf = (fieldKey, overrides = {}) =>
+	fieldFrom(sources.post_get_all.inputFields, 'Generated post list', fieldKey, overrides);
+const actionFieldOf = (opKey, fieldKey, overrides = {}) =>
+	fieldFrom(byKey[opKey].inputFields, `Generated action ${opKey}`, fieldKey, overrides);
 
 function postTrigger({ key, label, description, status, orderBy }) {
 	return {
@@ -109,4 +114,37 @@ const newSocialAccount = {
 	},
 };
 
-module.exports = { newPost, postPublished, postFailed, newTeam, newSocialAccount };
+const newComment = {
+	key: 'new_comment',
+	noun: 'Comment',
+	display: {
+		label: 'New Comment',
+		description:
+			'Triggers when bundle.social imports a new comment on the selected post, through a comment import or the automatic comment import.',
+	},
+	operation: {
+		inputFields: [
+			actionFieldOf('comment_import_get_fetched_comments', 'teamId'),
+			// The API lists fetched comments per post only, so the post is required.
+			actionFieldOf('comment_import_get_fetched_comments', 'postId', {
+				required: true,
+				helpText: 'The post whose comments trigger the Zap.',
+			}),
+			actionFieldOf('comment_import_get_fetched_comments', 'socialAccountId', {
+				helpText: 'Leave empty for all accounts.',
+			}),
+			actionFieldOf('comment_import_get_fetched_comments', 'platform', { helpText: 'Leave empty for all platforms.' }),
+		],
+		perform: async (z, bundle) => {
+			const { teamId, socialAccountId, platform, postId } = bundle.inputData;
+			// The API returns the newest comments first.
+			const data = await apiRequest(z, bundle, 'GET', '/api/v1/comment/import/comments', {
+				params: { teamId, postId, socialAccountId, platform, offset: 0, limit: POLL_SIZE },
+			});
+			return (data && data.items) || [];
+		},
+		sample: byKey.comment_import_get_fetched_comments.sample.items[0],
+	},
+};
+
+module.exports = { newPost, postPublished, postFailed, newTeam, newSocialAccount, newComment };

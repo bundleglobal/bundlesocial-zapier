@@ -124,7 +124,9 @@ run ok trigger social_account_list "{\"teamId\":\"$TEAM\"}"
 run ok trigger upload_list "{\"teamId\":\"$TEAM\"}"
 run ok trigger new_team
 run ok trigger new_social_account "{\"teamId\":\"$TEAM\"}"
+run ok trigger post_list "{\"teamId\":\"$TEAM\"}"
 run ok trigger new_post "{\"teamId\":\"$TEAM\"}"
+run ok trigger new_comment "{\"teamId\":\"$TEAM\",\"postId\":\"$POST\"}"
 run ok trigger post_published "{\"teamId\":\"$TEAM\"}"
 run ok trigger post_published "{\"teamId\":\"$TEAM\",\"platforms\":[\"${POST_PLATFORM:-LINKEDIN}\"]}"
 run ok trigger post_failed "{\"teamId\":\"$TEAM\"}"
@@ -151,9 +153,23 @@ IMPORT="$(json imports.0.id 2>/dev/null || true)"
 [ -n "$IMPORT" ] && run ok search post_history_import_get "{\"importId\":\"$IMPORT\"}"
 [ -n "$PLATFORM" ] && run ok create post_history_import_get_imported_posts "{\"teamId\":\"$TEAM\",\"socialAccountType\":\"$PLATFORM\"}"
 
-section "3b. Analytics"
-[ -n "$POST_PLATFORM" ] && run ok create analytics_get_post_analytics "{\"postId\":\"$POST\",\"platformType\":\"$POST_PLATFORM\"}"
-[ -n "$PLATFORM" ] && run ok create analytics_get_social_account_analytics "{\"teamId\":\"$TEAM\",\"platformType\":\"$PLATFORM\"}"
+section "3b. Analytics and comments"
+if [ -n "$POST_PLATFORM" ]; then
+	run ok create analytics_get_post_analytics "{\"postId\":\"$POST\",\"platformType\":\"$POST_PLATFORM\"}"
+	run ok create analytics_get_raw_post_analytics "{\"postId\":\"$POST\",\"platformType\":\"$POST_PLATFORM\"}"
+	run ok create analytics_get_bulk_post_analytics "{\"postIds\":[\"$POST\"],\"platformType\":\"$POST_PLATFORM\"}"
+fi
+if [ -n "$PLATFORM" ]; then
+	run ok create analytics_get_social_account_analytics "{\"teamId\":\"$TEAM\",\"platformType\":\"$PLATFORM\"}"
+	run ok create analytics_get_raw_social_account_analytics "{\"teamId\":\"$TEAM\",\"platformType\":\"$PLATFORM\"}"
+fi
+run ok create comment_get_all "{\"teamId\":\"$TEAM\"}"
+COMMENT="$(json items.0.id 2>/dev/null || true)"
+[ -n "$COMMENT" ] && run ok search comment_get "{\"id\":\"$COMMENT\"}"
+run ok create comment_import_get_all "{\"teamId\":\"$TEAM\"}"
+COMMENT_IMPORT="$(json imports.0.id 2>/dev/null || true)"
+[ -n "$COMMENT_IMPORT" ] && run ok search comment_import_get "{\"importId\":\"$COMMENT_IMPORT\"}"
+run ok create comment_import_get_fetched_comments "{\"teamId\":\"$TEAM\",\"postId\":\"$POST\"}"
 
 if $READ_ONLY; then
 	:
@@ -161,6 +177,7 @@ else
 	section "4. Writes (temporary team and DRAFT post, deleted at the end)"
 	TEMP_TEAM=""
 	NEW_POST=""
+	NEW_COMMENT=""
 
 	# A throwaway team holds the uploads; deleting it removes whatever the upload deletes leave behind.
 	run ok create team_create "{\"name\":\"Zapier smoke test $(date +%s)\"}"
@@ -205,6 +222,12 @@ else
 		run error create post_history_import_retry "{\"importId\":\"00000000-0000-0000-0000-000000000000\",\"teamId\":\"$TEMP_TEAM\"}"
 		run ok create post_history_import_delete_imported_posts "{\"teamId\":\"$TEMP_TEAM\",\"postIds\":[\"00000000-0000-0000-0000-000000000000\"]}"
 		run error create post_retry '{"id":"00000000-0000-0000-0000-000000000000"}'
+		# Refreshing analytics uses network rate limits and acting on a comment changes it on the network.
+		run error create analytics_refresh_post_analytics '{"postId":"00000000-0000-0000-0000-000000000000","platformType":"LINKEDIN"}'
+		run error create analytics_refresh_social_account_analytics "{\"teamId\":\"$TEMP_TEAM\",\"platformType\":\"LINKEDIN\"}"
+		run error create comment_import_create "{\"teamId\":\"$TEMP_TEAM\",\"socialAccountType\":\"LINKEDIN\",\"postId\":\"00000000-0000-0000-0000-000000000000\"}"
+		run error create comment_import_act_on_fetched_comment "{\"commentId\":\"00000000-0000-0000-0000-000000000000\",\"teamId\":\"$TEMP_TEAM\",\"action\":\"LIKE\"}"
+		run error create comment_retry '{"id":"00000000-0000-0000-0000-000000000000"}'
 		run error create social_account_copy "{\"fromTeamId\":\"$TEMP_TEAM\",\"toTeamId\":\"$TEMP_TEAM\",\"socialAccountTypes\":[\"LINKEDIN\"]}"
 	fi
 
@@ -215,6 +238,13 @@ else
 		if [ -n "$NEW_POST" ]; then
 			run ok search post_get_by_reference_key "{\"referenceKey\":\"$REF\"}"
 			run ok create post_update "{\"id\":\"$NEW_POST\",\"title\":\"Zapier smoke test (updated)\",\"data__${PLATFORM}__text\":\"Zapier smoke test (updated)\"}"
+			# A DRAFT comment on the DRAFT post is never published.
+			run ok create comment_create "{\"teamId\":\"$TEAM\",\"internalPostId\":\"$NEW_POST\",\"title\":\"Zapier smoke test\",\"postDate\":\"2026-12-01T11:00:00Z\",\"status\":\"DRAFT\",\"socialAccountTypes\":[\"$PLATFORM\"],\"data__${PLATFORM}__text\":\"Zapier smoke test comment\"}"
+			NEW_COMMENT="$(json id 2>/dev/null || true)"
+			if [ -n "$NEW_COMMENT" ]; then
+				run ok search comment_get "{\"id\":\"$NEW_COMMENT\"}"
+				run ok create comment_update "{\"id\":\"$NEW_COMMENT\",\"socialAccountTypes\":[\"$PLATFORM\"],\"data__${PLATFORM}__text\":\"Zapier smoke test comment (updated)\"}"
+			fi
 		fi
 		run error create post_create "{\"teamId\":\"$TEAM\",\"title\":\"x\",\"postDate\":\"not-a-date\",\"status\":\"DRAFT\",\"socialAccountTypes\":[\"$PLATFORM\"]}"
 	else
@@ -222,11 +252,17 @@ else
 	fi
 
 	section "4b. Cleanup"
+	[ -n "$NEW_COMMENT" ] && run ok create comment_delete "{\"id\":\"$NEW_COMMENT\"}"
 	[ -n "$NEW_POST" ] && run ok create post_delete "{\"id\":\"$NEW_POST\"}"
 	[ -n "$TEMP_TEAM" ] && run ok create team_delete "{\"id\":\"$TEMP_TEAM\"}"
 fi
 
+section "5. Samples"
+SAMPLES_OK=true
+node scripts/check-samples.mjs "$LOG_DIR" || SAMPLES_OK=false
+
 section "Result"
 echo "  $PASSED passed, $FAILED failed. Full output per call in $LOG_DIR/."
 for failure in "${FAILURES[@]+"${FAILURES[@]}"}"; do echo "  - $failure"; done
-[ "$FAILED" -eq 0 ]
+$SAMPLES_OK || echo "  Some samples hold keys the live results do not have, see section 5."
+[ "$FAILED" -eq 0 ] && $SAMPLES_OK

@@ -36,6 +36,19 @@ describe('app definition', () => {
 		expect(problems).toEqual([]);
 	});
 
+	it('gives post fields a dropdown only where the form has a team to scope it', () => {
+		for (const op of operations) {
+			const hasTeam = op.inputFields.some((f) => f.key === 'teamId');
+			for (const post of op.inputFields.filter((f) => ['postId', 'internalPostId'].includes(f.key))) {
+				if (hasTeam) {
+					expect([op.key, post.dynamic, post.dependsOn]).toEqual([op.key, 'post_list.id.name', ['teamId']]);
+				} else {
+					expect([op.key, post.dynamic]).toEqual([op.key, undefined]);
+				}
+			}
+		}
+	});
+
 	it('points every dropdown at a hidden trigger that exists', () => {
 		const problems = [];
 		const check = (where, fields) => {

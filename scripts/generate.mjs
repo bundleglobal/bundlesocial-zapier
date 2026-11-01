@@ -21,7 +21,7 @@ const DEFAULT_LIMIT = '50';
 const MAX_LABEL = 64;
 const MAX_HELP_TEXT = 1000;
 // Operations the integration exposes as Zapier actions: the publishing workflow from team setup to analytics,
-// plus organization, team, social account, post, post history import and upload management.
+// plus organization, team, social account, post, post history import, upload, analytics and comment management.
 const PUBLISHED_OPERATIONS = new Set([
 	'organization.getOrganization',
 	'organization.getPostsUsage',
@@ -75,7 +75,23 @@ const PUBLISHED_OPERATIONS = new Set([
 	'upload.completeMultipartUpload',
 	'upload.abortMultipartUpload',
 	'analytics.getPostAnalytics',
+	'analytics.getPostAnalyticsRaw',
+	'analytics.getBulkPostAnalytics',
+	'analytics.forcePostAnalytics',
 	'analytics.getSocialAccountAnalytics',
+	'analytics.getSocialAccountAnalyticsRaw',
+	'analytics.forceSocialAccountAnalytics',
+	'comment.create',
+	'comment.get',
+	'comment.getList',
+	'comment.update',
+	'comment.delete',
+	'comment.retry',
+	'comment.importCreate',
+	'comment.importGetList',
+	'comment.importGetById',
+	'comment.importGetFetchedComments',
+	'comment.importActionFetchedComment',
 ]);
 // Action descriptions in the style Zapier's review asks for; the spec's own read as API notes.
 const ACTION_DESCRIPTIONS = {
@@ -147,8 +163,30 @@ const ACTION_DESCRIPTIONS = {
 	'upload.completeMultipartUpload': 'Assembles the uploaded parts of a multipart upload and adds the file to the media library.',
 	'upload.abortMultipartUpload': 'Discards an unfinished multipart upload and the parts already sent.',
 	'analytics.getPostAnalytics': 'Retrieves engagement metrics such as likes, comments, shares and views for a published post.',
+	'analytics.getPostAnalyticsRaw':
+		'Retrieves the analytics of a published post exactly as the network returns them, for metrics the standard analytics leave out.',
+	'analytics.getBulkPostAnalytics': 'Retrieves the analytics of up to 60 published posts on one network in a single step.',
+	'analytics.forcePostAnalytics':
+		'Fetches fresh analytics for a published post from the network right away. Uses network rate limits, so use it sparingly.',
 	'analytics.getSocialAccountAnalytics':
 		'Retrieves profile metrics such as followers, reach and impressions for a connected social account.',
+	'analytics.getSocialAccountAnalyticsRaw':
+		'Retrieves the analytics of a connected social account exactly as the network returns them, for metrics the standard analytics leave out.',
+	'analytics.forceSocialAccountAnalytics':
+		'Fetches fresh analytics for a connected social account from the network right away. Uses network rate limits, so use it sparingly.',
+	'comment.create':
+		'Schedules a comment, or publishes it right away, on a published post or as a reply to a comment, for example the first comment of an Instagram or LinkedIn post.',
+	'comment.get': 'Finds a comment created through bundle.social by ID, with its publishing status and errors.',
+	'comment.update':
+		'Updates the text or scheduled time of a comment that has not been published yet. Fields left empty keep their current value.',
+	'comment.delete': 'Permanently deletes a comment from bundle.social. Deleting a scheduled comment cancels it.',
+	'comment.retry': 'Publishes a failed comment again, for example after reconnecting an expired account.',
+	'comment.importCreate': 'Starts importing the existing comments of a published post from the network.',
+	'comment.importGetList': 'Lists the comment imports of a team with their status.',
+	'comment.importGetById': 'Finds a comment import by ID, with its status, progress and result.',
+	'comment.importGetFetchedComments': 'Lists the comments imported from the network for a post.',
+	'comment.importActionFetchedComment':
+		'Hides, unhides, likes, unlikes, approves, rejects or deletes an imported comment directly on the network.',
 };
 // Operations generated only for their fields and samples, which the hand-written triggers reuse.
 const TRIGGER_SOURCES = new Set(['post.getList']);
@@ -200,6 +238,8 @@ const ACRONYMS = {
 // Resource value -> display name, plural noun for "Get many" actions.
 const RESOURCES = {
 	analytics: { name: 'Analytics', plural: 'analytics' },
+	comment: { name: 'Comment', plural: 'comments' },
+	commentImport: { name: 'Comment Import', plural: 'comment imports' },
 	organization: { name: 'Organization' },
 	post: { name: 'Post', plural: 'posts' },
 	postHistoryImport: { name: 'Post History Import', plural: 'post history imports' },
@@ -239,6 +279,17 @@ const OPERATION_NAMES = {
 	'upload.abortMultipartUpload': 'Abort Multipart Upload',
 	'analytics.getSocialAccountAnalytics': 'Get Social Account Analytics',
 	'analytics.getPostAnalytics': 'Get Post Analytics',
+	'analytics.getBulkPostAnalytics': 'Get Bulk Post Analytics',
+	'analytics.forceSocialAccountAnalytics': 'Refresh Social Account Analytics',
+	'analytics.forcePostAnalytics': 'Refresh Post Analytics',
+	'analytics.getSocialAccountAnalyticsRaw': 'Get Raw Social Account Analytics',
+	'analytics.getPostAnalyticsRaw': 'Get Raw Post Analytics',
+	'comment.getList': GET_MANY,
+	'comment.importCreate': 'Create',
+	'comment.importGetList': GET_MANY,
+	'comment.importGetFetchedComments': 'Get Fetched Comments',
+	'comment.importActionFetchedComment': 'Act on Fetched Comment',
+	'comment.importGetById': 'Get',
 };
 
 // Spec descriptions that are wrong or read badly as help text. Keys are `<operationId>.<field>` or `<field>`.
@@ -247,9 +298,29 @@ const DESCRIPTION_OVERRIDES = {
 	disableDuet: 'If true, other TikTok users cannot make Duets with this post.',
 	disableStitch: 'If true, other TikTok users cannot make Stitches with this post.',
 	// Cross-field rules the API enforces in a refinement, which the spec does not show.
-	'analytics.getPostAnalytics.postId': 'Set together with Platform Type. For an imported post, set only Imported Post ID.',
-	'analytics.getPostAnalytics.platformType': 'Required with Post ID.',
-	'analytics.getPostAnalytics.importedPostId': 'Use instead of Post ID and Platform Type for an imported post.',
+	'comment.importGetFetchedComments.postId': 'Set either this or Imported Post ID, not both.',
+	'comment.importGetFetchedComments.importedPostId': 'Set either this or Post, not both.',
+	...Object.fromEntries(
+		['getPostAnalytics', 'getPostAnalyticsRaw', 'forcePostAnalytics'].flatMap((op) => [
+			[`analytics.${op}.postId`, 'Set together with Platform Type. For an imported post, set only Imported Post ID.'],
+			[`analytics.${op}.platformType`, 'Required with Post ID.'],
+			[`analytics.${op}.importedPostId`, 'Use instead of Post ID and Platform Type for an imported post.'],
+		]),
+	),
+};
+
+// Body fields the API requires although the spec marks them optional. Keys are `<operationId>.<field>`.
+const REQUIRED_OVERRIDES = new Set([
+	// Create Comment answers 400 "Title is required" without it.
+	'comment.create.title',
+	// Update Comment answers 500 without it, even when only the title changes.
+	'comment.update.socialAccountTypes',
+]);
+const usedRequiredOverrides = new Set();
+
+// Response keys the spec marks required but the API leaves out, so they stay out of the samples.
+const SAMPLE_OMIT = {
+	'postImport.getImportedPosts': ['limit', 'remainingCapacity'],
 };
 
 // Strings that are dates in practice but typed as plain strings in the spec.
@@ -265,6 +336,11 @@ const DYNAMIC = {
 // Dropdowns for `{id}` path parameters, keyed by what the ID belongs to.
 const PATH_DYNAMIC = {
 	uploadId: { dynamic: 'upload_list.id.name', label: 'Upload' },
+};
+// Dropdowns whose list is scoped to a team: only added when the form has a Team field to depend on.
+const TEAM_SCOPED_DYNAMIC = {
+	postId: { dynamic: 'post_list.id.name', label: 'Post' },
+	internalPostId: { dynamic: 'post_list.id.name', label: 'Post' },
 };
 const DYNAMIC_HELP = 'Pick from the list, or map an ID from an earlier step.';
 const SENSITIVE_NAME = /secret|password|token|apikey/i;
@@ -767,11 +843,19 @@ function isEmptySample(value) {
 	return isPlainObject(value) && Object.keys(value).length === 0;
 }
 
+// A response that only holds lists of objects, like `{ imports: [...] }`, keeps its required lists empty:
+// the keys are always there, while `{ success: true }` is what an empty response becomes.
+function emptyListsSample(schema) {
+	const s = resolveSchema(schema);
+	const lists = (s.required ?? []).filter((k) => resolveSchema(s.properties?.[k]).type === 'array');
+	return lists.length ? Object.fromEntries(lists.map((k) => [k, []])) : { success: true };
+}
+
 // Mirrors how lib/run.js turns a response into a Zapier result.
 function resultSample(schema) {
 	const value = sampleOf(schema);
 	if (Array.isArray(value)) return { items: value };
-	if (isPlainObject(value)) return Object.keys(value).length ? value : { success: true };
+	if (isPlainObject(value)) return Object.keys(value).length ? value : emptyListsSample(schema);
 	if (value === null || value === undefined) return { success: true };
 	return { value };
 }
@@ -881,7 +965,14 @@ function buildOperation(operationId, method, apiPath, op) {
 	let selector;
 
 	const addBodyProperties = (schema, marker) => {
-		const required = new Set(schema.required ?? []);
+		const required = new Set([
+			...(schema.required ?? []),
+			...Object.keys(schema.properties ?? {}).filter((k) => {
+				const id = `${operationId}.${k}`;
+				if (REQUIRED_OVERRIDES.has(id)) usedRequiredOverrides.add(id);
+				return REQUIRED_OVERRIDES.has(id);
+			}),
+		]);
 		// A required platform list (e.g. socialAccountTypes) hides the sections of unselected platforms.
 		const selectorKey = Object.entries(schema.properties ?? {}).find(
 			([k, s]) => required.has(k) && kindOf(s, k, 0) === 'multiOptions',
@@ -1050,13 +1141,26 @@ function buildOperation(operationId, method, apiPath, op) {
 		);
 	}
 
+	if (fields.some((field) => field.key === 'teamId')) {
+		fields.forEach((field, i) => {
+			const dropdown = TEAM_SCOPED_DYNAMIC[field.key];
+			if (!dropdown || field.type !== 'string' || field.list) return;
+			fields[i] = asDropdown({ ...field, dependsOn: ['teamId'] }, dropdown);
+		});
+	}
+
 	const keys = new Set();
 	for (const field of fields) {
 		if (keys.has(field.key)) throw new Error(`Duplicate field key ${field.key} in ${operationId}`);
 		keys.add(field.key);
 	}
 
-	const sample = type === 'search' ? sampleOf(responseSchema) : resultSample(responseSchema);
+	let sample = type === 'search' ? sampleOf(responseSchema) : resultSample(responseSchema);
+	if (SAMPLE_OMIT[operationId]) {
+		const omitted = SAMPLE_OMIT[operationId].filter((k) => !(k in sample));
+		if (omitted.length) throw new Error(`Sample of ${operationId} has no ${omitted.join(', ')} to omit`);
+		sample = Object.fromEntries(Object.entries(sample).filter(([k]) => !SAMPLE_OMIT[operationId].includes(k)));
+	}
 	const spec = {
 		method: method.toUpperCase(),
 		path: apiPath,
@@ -1228,6 +1332,8 @@ function main() {
 	// A renamed or removed operation in the spec must fail loudly, not silently drop an action from Zaps.
 	const missing = [...PUBLISHED_OPERATIONS, ...TRIGGER_SOURCES].filter((id) => !found.has(id));
 	if (missing.length) throw new Error(`Operations not found in the spec: ${missing.join(', ')}`);
+	const unusedRequired = [...REQUIRED_OVERRIDES].filter((id) => !usedRequiredOverrides.has(id));
+	if (unusedRequired.length) throw new Error(`Required overrides match no body field: ${unusedRequired.join(', ')}`);
 	for (const built of buildCustomOperations(spec)) (byResource[built.resource] ??= []).push(built);
 
 	// Zapier keys are unique per action type; labels should be too, or the action list gets confusing.

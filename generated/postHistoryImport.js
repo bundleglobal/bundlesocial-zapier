@@ -484,8 +484,6 @@ module.exports = [
 		},
 		sample: {
 			total: 1,
-			limit: 1,
-			remainingCapacity: 1,
 		},
 	},
 	{
@@ -584,7 +582,7 @@ module.exports = [
 			],
 		},
 		sample: {
-			success: true,
+			imports: [],
 		},
 	},
 	{
