@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.0.2...v1.1.0) (2026-11-01)
+
+
+### Features
+
+* organization, team, social account and upload actions ([#2](https://github.com/bundleglobal/bundlesocial-zapier/issues/2)) ([5301450](https://github.com/bundleglobal/bundlesocial-zapier/commit/5301450c852d2a0d741eb2a563d4ccc3474e9eff))
+
 ## [1.0.2](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.0.1...v1.0.2) (2026-10-31)
 
 
