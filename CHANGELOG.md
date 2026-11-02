@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.3.0...v1.4.0) (2026-11-02)
+
+
+### Features
+
+* conversation and automation actions ([#5](https://github.com/bundleglobal/bundlesocial-zapier/issues/5)) ([fb9eb57](https://github.com/bundleglobal/bundlesocial-zapier/commit/fb9eb5765ef49d08b57c1db7db8e940fbeaec3d2))
+
 # [1.3.0](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.2.0...v1.3.0) (2026-11-01)
 
 
