@@ -147,4 +147,44 @@ const newComment = {
 	},
 };
 
-module.exports = { newPost, postPublished, postFailed, newTeam, newSocialAccount, newComment };
+// A conversation fires again for every message the participant sends: the ID includes the time of the last one.
+// Only received messages count, so a Zap that answers with Send Message does not trigger itself.
+const receivedMessage = (conversation) => ({
+	...conversation,
+	id: `${conversation.id}:${conversation.platformData.lastInboundAt}`,
+	conversationId: conversation.id,
+});
+
+const newDirectMessage = {
+	key: 'new_direct_message',
+	noun: 'Message',
+	display: {
+		label: 'New Direct Message',
+		description: 'Triggers when someone sends a direct message to a connected Instagram or Facebook account.',
+	},
+	operation: {
+		inputFields: [
+			actionFieldOf('conversation_get_all', 'teamId'),
+			actionFieldOf('conversation_get_all', 'socialAccountId', { helpText: 'Leave empty for all accounts.' }),
+			actionFieldOf('conversation_get_all', 'platform', { helpText: 'Leave empty for all platforms.' }),
+		],
+		perform: async (z, bundle) => {
+			const { teamId, socialAccountId, platform } = bundle.inputData;
+			// The API returns the most recently active conversations first.
+			const data = await apiRequest(z, bundle, 'GET', '/api/v1/conversations/', {
+				params: { teamId, socialAccountId, platform, offset: 0, limit: POLL_SIZE },
+			});
+			const lastReceived = (conversation) => (conversation.platformData && conversation.platformData.lastInboundAt) || '';
+			return ((data && data.items) || [])
+				.filter(lastReceived)
+				.sort((a, b) => lastReceived(b).localeCompare(lastReceived(a)))
+				.map(receivedMessage);
+		},
+		sample: receivedMessage({
+			...byKey.conversation_get_all.sample.items[0],
+			platformData: { lastInboundAt: '2026-01-15T10:00:00.000Z' },
+		}),
+	},
+};
+
+module.exports = { newPost, postPublished, postFailed, newTeam, newSocialAccount, newComment, newDirectMessage };

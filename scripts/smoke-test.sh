@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Runs the integration locally against the real API with `zapier-platform invoke`.
 # Reads authData_apiKey, SMOKE_TEAM_ID, SMOKE_POST_ID and optional SMOKE_PLATFORM from .env.
-# Sections 1-3 only read. Section 4 creates a temporary team (with uploads) and a DRAFT post, then
-# deletes both. Actions that change social accounts run against the empty temporary team and are
-# expected to fail there, which checks the request without touching a real account. Every published action and trigger is called at least once.
+# Sections 1-3 only read. Section 4 creates a temporary team (with uploads), a DRAFT post and DRAFT
+# automation flows, then deletes them. Actions that change social accounts run against the empty
+# temporary team and are expected to fail there, which checks the request without touching a real
+# account; actions that would message a real person run against missing IDs. Every published action
+# and trigger is called at least once.
 #
 # Usage: bash scripts/smoke-test.sh [--read-only]
 set -uo pipefail
@@ -116,6 +118,8 @@ ACCOUNT="$(node -e 'const t = JSON.parse(require("fs").readFileSync(0, "utf8") |
 # Post analytics need the platform the post went out on.
 POST_JSON="$(curl -fsS -H "x-api-key: $authData_apiKey" "${BUNDLESOCIAL_BASE_URL:-https://api.bundle.social}/api/v1/post/$POST" 2>/dev/null)"
 POST_PLATFORM="$(node -e 'const p = JSON.parse(require("fs").readFileSync(0, "utf8") || "{}"); const d = p.data || {}; console.log(Object.keys(d).find((k) => d[k]) || "")' <<<"$POST_JSON" 2>/dev/null)"
+# An Instagram or Facebook account for the draft automation flow.
+DM_ACCOUNT="$(node -e 'const t = JSON.parse(require("fs").readFileSync(0, "utf8") || "{}"); const a = (t.socialAccounts || []).find((s) => !s.deletedAt && ["INSTAGRAM", "FACEBOOK"].includes(s.type)); console.log(a ? `${a.type} ${a.id}` : "")' <<<"$TEAM_JSON" 2>/dev/null)"
 echo "  team $TEAM, post $POST (${POST_PLATFORM:-unknown platform}), draft platform ${PLATFORM:-none connected}"
 
 section "2. Triggers"
@@ -127,6 +131,7 @@ run ok trigger new_social_account "{\"teamId\":\"$TEAM\"}"
 run ok trigger post_list "{\"teamId\":\"$TEAM\"}"
 run ok trigger new_post "{\"teamId\":\"$TEAM\"}"
 run ok trigger new_comment "{\"teamId\":\"$TEAM\",\"postId\":\"$POST\"}"
+run ok trigger new_direct_message "{\"teamId\":\"$TEAM\"}"
 run ok trigger post_published "{\"teamId\":\"$TEAM\"}"
 run ok trigger post_published "{\"teamId\":\"$TEAM\",\"platforms\":[\"${POST_PLATFORM:-LINKEDIN}\"]}"
 run ok trigger post_failed "{\"teamId\":\"$TEAM\"}"
@@ -171,6 +176,29 @@ COMMENT_IMPORT="$(json imports.0.id 2>/dev/null || true)"
 [ -n "$COMMENT_IMPORT" ] && run ok search comment_import_get "{\"importId\":\"$COMMENT_IMPORT\"}"
 run ok create comment_import_get_fetched_comments "{\"teamId\":\"$TEAM\",\"postId\":\"$POST\"}"
 
+section "3c. Conversations and automations"
+MISSING="00000000-0000-0000-0000-000000000000"
+run ok create conversation_get_all "{\"teamId\":\"$TEAM\",\"limit\":\"5\"}"
+CONVERSATION="$(json items.0.id 2>/dev/null || true)"
+if [ -n "$CONVERSATION" ]; then
+	run ok search conversation_get "{\"id\":\"$CONVERSATION\"}"
+	run ok create conversation_get_messages "{\"id\":\"$CONVERSATION\",\"limit\":\"5\"}"
+else
+	run error create conversation_get_messages "{\"id\":\"$MISSING\"}"
+fi
+run empty search conversation_get "{\"id\":\"$MISSING\"}"
+run ok create automation_get_all "{\"teamId\":\"$TEAM\"}"
+FLOW="$(json items.0.id 2>/dev/null || true)"
+if [ -n "$FLOW" ]; then
+	run ok search automation_get "{\"id\":\"$FLOW\"}"
+	run ok create automation_get_executions "{\"id\":\"$FLOW\",\"teamId\":\"$TEAM\",\"limit\":\"5\"}"
+	EXECUTION="$(json items.0.id 2>/dev/null || true)"
+	[ -n "$EXECUTION" ] && run ok create automation_get_execution "{\"id\":\"$EXECUTION\"}"
+fi
+run empty search automation_get "{\"id\":\"$MISSING\"}"
+run error create automation_get_execution "{\"id\":\"$MISSING\"}"
+run ok create automation_provider_setting_get_all "{\"teamId\":\"$TEAM\"}"
+
 if $READ_ONLY; then
 	:
 else
@@ -178,6 +206,9 @@ else
 	TEMP_TEAM=""
 	NEW_POST=""
 	NEW_COMMENT=""
+	TEMP_FLOW=""
+	DRAFT_FLOW=""
+	COPIED_FLOW=""
 
 	# A throwaway team holds the uploads; deleting it removes whatever the upload deletes leave behind.
 	run ok create team_create "{\"name\":\"Zapier smoke test $(date +%s)\"}"
@@ -229,6 +260,49 @@ else
 		run error create comment_import_act_on_fetched_comment "{\"commentId\":\"00000000-0000-0000-0000-000000000000\",\"teamId\":\"$TEMP_TEAM\",\"action\":\"LIKE\"}"
 		run error create comment_retry '{"id":"00000000-0000-0000-0000-000000000000"}'
 		run error create social_account_copy "{\"fromTeamId\":\"$TEMP_TEAM\",\"toTeamId\":\"$TEMP_TEAM\",\"socialAccountTypes\":[\"LINKEDIN\"]}"
+
+		# A flow without a definition stays a draft that never runs.
+		STEPS='[{\"type\":\"SEND_MESSAGE\",\"message\":{\"text\":\"Zapier smoke test\"}}]'
+		run ok create automation_create "{\"teamId\":\"$TEMP_TEAM\",\"name\":\"Zapier smoke test\",\"platformScope\":\"INSTAGRAM\"}"
+		TEMP_FLOW="$(json id 2>/dev/null || true)"
+		if [ -n "$TEMP_FLOW" ]; then
+			run ok search automation_get "{\"id\":\"$TEMP_FLOW\"}"
+			run ok create automation_update "{\"id\":\"$TEMP_FLOW\",\"name\":\"Zapier smoke test (renamed)\"}"
+			# The trigger fields and JSON steps pass the shape checks; the missing account fails the next ones.
+			run error create automation_update "{\"id\":\"$TEMP_FLOW\",\"definition__trigger__type\":\"DM_RECEIVED\",\"definition__trigger__platform\":\"INSTAGRAM\",\"definition__trigger__socialAccountId\":\"$MISSING\",\"definition__steps\":\"$STEPS\"}"
+			run error create automation_publish "{\"id\":\"$TEMP_FLOW\"}"
+			run error create automation_activate "{\"id\":\"$TEMP_FLOW\"}"
+			run ok create automation_pause "{\"id\":\"$TEMP_FLOW\"}"
+			run ok create automation_archive "{\"id\":\"$TEMP_FLOW\"}"
+			run ok create automation_get_executions "{\"id\":\"$TEMP_FLOW\",\"teamId\":\"$TEMP_TEAM\"}"
+			run error create automation_copy "{\"sourceTeamId\":\"$TEMP_TEAM\",\"targetTeamId\":\"$TEMP_TEAM\",\"flowId\":\"$TEMP_FLOW\"}"
+		fi
+		# A draft with a definition on a real account, copied to the temporary team. Drafts never run, and the
+		# sender filter keeps it from answering anyone even if it were published.
+		if [ -n "$DM_ACCOUNT" ]; then
+			read -r DM_TYPE DM_ID <<<"$DM_ACCOUNT"
+			run ok create automation_create "{\"teamId\":\"$TEAM\",\"name\":\"Zapier smoke test\",\"platformScope\":\"$DM_TYPE\",\"definition__trigger__type\":\"DM_RECEIVED\",\"definition__trigger__platform\":\"$DM_TYPE\",\"definition__trigger__socialAccountId\":\"$DM_ID\",\"definition__trigger__keywords\":\"zapier-smoke-$(date +%s)\",\"definition__trigger__senderExternalIds\":\"0\",\"definition__steps\":\"$STEPS\"}"
+			DRAFT_FLOW="$(json id 2>/dev/null || true)"
+			if [ -n "$DRAFT_FLOW" ]; then
+				# A missing conversation answers 404 before any step runs, so nothing is sent.
+				run error create automation_test "{\"id\":\"$DRAFT_FLOW\",\"input\":\"{\\\"conversationId\\\":\\\"$MISSING\\\"}\"}"
+				run ok create automation_copy "{\"sourceTeamId\":\"$TEAM\",\"targetTeamId\":\"$TEMP_TEAM\",\"flowId\":\"$DRAFT_FLOW\"}"
+				COPIED_FLOW="$(json items.0.id 2>/dev/null || true)"
+			fi
+		else
+			run error create automation_test "{\"id\":\"$MISSING\"}"
+		fi
+		# Messaging actions that would reach a real person run against missing IDs.
+		run error create conversation_send_message "{\"id\":\"$MISSING\",\"content__text\":\"Zapier smoke test\"}"
+		run error create conversation_react_to_message "{\"id\":\"$MISSING\",\"messageId\":\"$MISSING\",\"action\":\"REACT\"}"
+		run error create conversation_mark_as_read "{\"id\":\"$MISSING\"}"
+		run error create conversation_update "{\"id\":\"$MISSING\",\"status\":\"ARCHIVED\"}"
+		run error create conversation_archive "{\"id\":\"$MISSING\"}"
+		run error create conversation_open "{\"id\":\"$MISSING\"}"
+		run error create conversation_send_private_reply "{\"teamId\":\"$TEMP_TEAM\",\"fetchedCommentId\":\"$MISSING\",\"content__text\":\"Zapier smoke test\"}"
+		run error create automation_send_rich_message "{\"conversationId\":\"$MISSING\",\"teamId\":\"$TEMP_TEAM\",\"message__text\":\"Zapier smoke test\"}"
+		run error create automation_provider_setting_create_or_update "{\"socialAccountId\":\"$MISSING\",\"type\":\"INSTAGRAM_ICE_BREAKERS\",\"teamId\":\"$TEMP_TEAM\",\"platform\":\"INSTAGRAM\",\"config\":\"{\\\"iceBreakers\\\":[{\\\"question\\\":\\\"Zapier smoke test?\\\",\\\"payload\\\":\\\"SMOKE\\\"}]}\"}"
+		run error create automation_provider_setting_sync "{\"id\":\"$MISSING\"}"
 	fi
 
 	if [ -n "$PLATFORM" ]; then
@@ -252,6 +326,9 @@ else
 	fi
 
 	section "4b. Cleanup"
+	[ -n "$DRAFT_FLOW" ] && run ok create automation_delete "{\"id\":\"$DRAFT_FLOW\"}"
+	[ -n "$COPIED_FLOW" ] && run ok create automation_delete "{\"id\":\"$COPIED_FLOW\"}"
+	[ -n "$TEMP_FLOW" ] && run ok create automation_delete "{\"id\":\"$TEMP_FLOW\"}"
 	[ -n "$NEW_COMMENT" ] && run ok create comment_delete "{\"id\":\"$NEW_COMMENT\"}"
 	[ -n "$NEW_POST" ] && run ok create post_delete "{\"id\":\"$NEW_POST\"}"
 	[ -n "$TEMP_TEAM" ] && run ok create team_delete "{\"id\":\"$TEMP_TEAM\"}"

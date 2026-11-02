@@ -382,6 +382,201 @@ describe('analytics and comment actions', () => {
 	});
 });
 
+describe('conversation and automation actions', () => {
+	const fieldKeysOf = (create, inputData = {}) =>
+		create.operation.inputFields.flatMap((field) =>
+			typeof field === 'function' ? field(null, { inputData }).map((f) => f.key) : [field.key],
+		);
+
+	it('sends a message built from text, line items and JSON buttons', async () => {
+		nock(API)
+			.post('/api/v1/conversations/conv-1/messages', {
+				content: {
+					text: 'Pick one',
+					attachments: [{ type: 'IMAGE', url: 'https://example.com/a.jpg' }],
+					quickReplies: [{ label: 'Yes', payload: 'YES' }],
+				},
+				replyToMessageId: 'msg-1',
+			})
+			.reply(200, { conversation: { id: 'conv-1' }, message: { id: 'msg-2' }, conflict: false });
+
+		const result = await appTester(App.creates.conversation_send_message.operation.perform, {
+			authData,
+			inputData: {
+				id: 'conv-1',
+				content__text: 'Pick one',
+				content__attachments: [{ type: 'IMAGE', url: 'https://example.com/a.jpg' }],
+				content__quickReplies: [{ label: 'Yes', payload: 'YES' }],
+				replyToMessageId: 'msg-1',
+			},
+		});
+
+		expect(result.message).toEqual({ id: 'msg-2' });
+	});
+
+	it('pages through conversations by offset and offers no cursor, which the API rejects with an offset', async () => {
+		expect(fieldKeysOf(App.creates.conversation_get_all)).not.toContain('cursor');
+		expect(fieldKeysOf(App.creates.conversation_get_messages)).not.toContain('cursor');
+		expect(fieldKeysOf(App.creates.automation_get_executions)).not.toContain('cursor');
+		// Only the first page carries `total`.
+		nock(API)
+			.get('/api/v1/conversations/')
+			.query({ teamId: 'team-1', status: 'OPEN', offset: '0', limit: '3' })
+			.reply(200, { items: [{ id: 'a' }, { id: 'b' }], total: 3, nextCursor: 'x' })
+			.get('/api/v1/conversations/')
+			.query({ teamId: 'team-1', status: 'OPEN', offset: '2', limit: '1' })
+			.reply(200, { items: [{ id: 'c' }], nextCursor: null });
+
+		const result = await appTester(App.creates.conversation_get_all.operation.perform, {
+			authData,
+			inputData: { teamId: 'team-1', status: 'OPEN', limit: '3' },
+		});
+
+		expect(result).toEqual({ items: [{ id: 'a' }, { id: 'b' }, { id: 'c' }], total: 3 });
+	});
+
+	it('sends a text-only private reply and offers no media, which the API rejects there', async () => {
+		const keys = fieldKeysOf(App.creates.conversation_send_private_reply);
+		expect(keys).toContain('content__text');
+		expect(keys).not.toContain('content__attachments');
+		expect(keys).not.toContain('content__carousel__cards');
+		nock(API)
+			.post('/api/v1/conversations/private-reply', {
+				teamId: 'team-1',
+				fetchedCommentId: 'fc-1',
+				content: { text: 'Sent you the price list' },
+			})
+			.reply(200, { conversation: { id: 'conv-1' }, message: { id: 'msg-1' }, conflict: false });
+
+		const result = await appTester(App.creates.conversation_send_private_reply.operation.perform, {
+			authData,
+			inputData: { teamId: 'team-1', fetchedCommentId: 'fc-1', content__text: 'Sent you the price list' },
+		});
+
+		expect(result.conflict).toBe(false);
+	});
+
+	it('creates an automation flow from trigger fields and JSON steps', async () => {
+		nock(API)
+			.post('/api/v1/automations', {
+				teamId: 'team-1',
+				name: 'Price replies',
+				platformScope: 'INSTAGRAM',
+				definition: {
+					trigger: {
+						type: 'DM_RECEIVED',
+						platform: 'INSTAGRAM',
+						socialAccountId: 'sa-1',
+						keywords: ['price', 'pricing'],
+						caseSensitive: false,
+						actionDelaySeconds: 5,
+					},
+					steps: [{ type: 'SEND_MESSAGE', message: { text: 'Our prices: https://example.com/pricing' } }],
+				},
+			})
+			.reply(201, { id: 'flow-1', status: 'DRAFT' });
+
+		const result = await appTester(App.creates.automation_create.operation.perform, {
+			authData,
+			inputData: {
+				teamId: 'team-1',
+				name: 'Price replies',
+				platformScope: 'INSTAGRAM',
+				definition__trigger__type: 'DM_RECEIVED',
+				definition__trigger__platform: 'INSTAGRAM',
+				definition__trigger__socialAccountId: 'sa-1',
+				definition__trigger__keywords: 'price, pricing',
+				definition__trigger__caseSensitive: 'false',
+				definition__trigger__actionDelaySeconds: '5',
+				definition__steps: '[{"type":"SEND_MESSAGE","message":{"text":"Our prices: https://example.com/pricing"}}]',
+			},
+		});
+
+		expect(result).toEqual({ id: 'flow-1', status: 'DRAFT' });
+	});
+
+	it('renames an automation flow without sending a definition', async () => {
+		nock(API).patch('/api/v1/automations/flow-1', { name: 'Renamed' }).reply(200, { id: 'flow-1', name: 'Renamed' });
+
+		const result = await appTester(App.creates.automation_update.operation.perform, {
+			authData,
+			inputData: { id: 'flow-1', name: 'Renamed' },
+		});
+
+		expect(result).toEqual({ id: 'flow-1', name: 'Renamed' });
+	});
+
+	it('publishes the saved draft with an empty body', async () => {
+		expect(fieldKeysOf(App.creates.automation_publish)).toEqual(['id']);
+		nock(API).post('/api/v1/automations/flow-1/publish', {}).reply(200, { id: 'flow-1', status: 'ACTIVE' });
+
+		const result = await appTester(App.creates.automation_publish.operation.perform, {
+			authData,
+			inputData: { id: 'flow-1' },
+		});
+
+		expect(result).toEqual({ id: 'flow-1', status: 'ACTIVE' });
+	});
+
+	it('copies automation flows between teams', async () => {
+		nock(API)
+			.post('/api/v1/automations/copy', { sourceTeamId: 'team-1', targetTeamId: 'team-2', flowId: 'flow-1' })
+			.reply(201, { items: [{ id: 'flow-2' }], total: 1, skipped: 0 });
+
+		const result = await appTester(App.creates.automation_copy.operation.perform, {
+			authData,
+			inputData: { sourceTeamId: 'team-1', targetTeamId: 'team-2', flowId: 'flow-1' },
+		});
+
+		expect(result).toEqual({ items: [{ id: 'flow-2' }], total: 1, skipped: 0 });
+	});
+
+	it('saves ice breakers with the social account and type in the path', async () => {
+		const iceBreakers = [{ question: 'What are your prices?', payload: 'ICE_PRICING' }];
+		nock(API)
+			.put('/api/v1/automation-provider-settings/sa-1/INSTAGRAM_ICE_BREAKERS', {
+				teamId: 'team-1',
+				platform: 'INSTAGRAM',
+				config: { iceBreakers },
+			})
+			.reply(200, { id: 'ps-1', status: 'DRAFT' });
+
+		const result = await appTester(App.creates.automation_provider_setting_create_or_update.operation.perform, {
+			authData,
+			inputData: {
+				socialAccountId: 'sa-1',
+				type: 'INSTAGRAM_ICE_BREAKERS',
+				teamId: 'team-1',
+				platform: 'INSTAGRAM',
+				config: JSON.stringify({ iceBreakers }),
+			},
+		});
+
+		expect(result).toEqual({ id: 'ps-1', status: 'DRAFT' });
+	});
+
+	it('sends a rich message with an uploaded image', async () => {
+		nock(API)
+			.post('/api/v1/automation-rich-messages/conversations/conv-1', {
+				teamId: 'team-1',
+				message: { text: 'Our bestseller', attachments: [{ uploadId: 'up-1', type: 'IMAGE' }] },
+			})
+			.reply(200, { conversationId: 'conv-1', messageId: 'msg-1', externalMessageId: 'ext-1' });
+
+		const result = await appTester(App.creates.automation_send_rich_message.operation.perform, {
+			authData,
+			inputData: {
+				conversationId: 'conv-1',
+				teamId: 'team-1',
+				message__text: 'Our bestseller',
+				message__attachments: [{ uploadId: 'up-1', type: 'IMAGE' }],
+			},
+		});
+
+		expect(result).toEqual({ conversationId: 'conv-1', messageId: 'msg-1', externalMessageId: 'ext-1' });
+	});
+});
+
 describe('searches', () => {
 	it('returns the record in a list', async () => {
 		nock(API).get('/api/v1/team/team-1').reply(200, { id: 'team-1' });
@@ -495,6 +690,32 @@ describe('triggers', () => {
 		});
 
 		expect(result).toEqual([{ id: 'fc1' }]);
+	});
+
+	it('fires a direct message trigger once per received message, newest first', async () => {
+		nock(API)
+			.get('/api/v1/conversations/')
+			.query({ teamId: 'team-1', platform: 'INSTAGRAM', offset: '0', limit: '100' })
+			.reply(200, {
+				items: [
+					// Our reply is the latest activity here, but the trigger keys on the participant's last message.
+					{ id: 'c1', lastMessageAt: '2026-01-15T11:00:00.000Z', platformData: { lastInboundAt: '2026-01-15T09:00:00.000Z' } },
+					// Opened by a private reply: the participant has not written yet.
+					{ id: 'c2', lastMessageAt: '2026-01-15T10:30:00.000Z', platformData: { canReply: false } },
+					{ id: 'c3', lastMessageAt: '2026-01-15T10:00:00.000Z', platformData: { lastInboundAt: '2026-01-15T10:00:00.000Z' } },
+				],
+				total: 3,
+			});
+
+		const result = await appTester(App.triggers.new_direct_message.operation.perform, {
+			authData,
+			inputData: { teamId: 'team-1', platform: 'INSTAGRAM' },
+		});
+
+		expect(result.map((item) => [item.id, item.conversationId])).toEqual([
+			['c3:2026-01-15T10:00:00.000Z', 'c3'],
+			['c1:2026-01-15T09:00:00.000Z', 'c1'],
+		]);
 	});
 
 	it('lists nothing in the post dropdown until a team is picked', async () => {

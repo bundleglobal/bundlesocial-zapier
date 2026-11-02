@@ -21,7 +21,8 @@ const DEFAULT_LIMIT = '50';
 const MAX_LABEL = 64;
 const MAX_HELP_TEXT = 1000;
 // Operations the integration exposes as Zapier actions: the publishing workflow from team setup to analytics,
-// plus organization, team, social account, post, post history import, upload, analytics and comment management.
+// plus organization, team, social account, post, post history import, upload, analytics, comment,
+// conversation (DM) and automation management.
 const PUBLISHED_OPERATIONS = new Set([
 	'organization.getOrganization',
 	'organization.getPostsUsage',
@@ -92,6 +93,33 @@ const PUBLISHED_OPERATIONS = new Set([
 	'comment.importGetById',
 	'comment.importGetFetchedComments',
 	'comment.importActionFetchedComment',
+	'conversation.getList',
+	'conversation.get',
+	'conversation.update',
+	'conversation.getMessages',
+	'conversation.sendMessage',
+	'conversation.reactMessage',
+	'conversation.markRead',
+	'conversation.privateReply',
+	'conversation.archive',
+	'conversation.open',
+	'automation.getFlows',
+	'automation.createFlow',
+	'automation.copyFlows',
+	'automation.getFlow',
+	'automation.updateFlow',
+	'automation.deleteFlow',
+	'automation.publishFlow',
+	'automation.pauseFlow',
+	'automation.activateFlow',
+	'automation.archiveFlow',
+	'automation.getFlowExecutions',
+	'automation.getExecution',
+	'automation.testFlow',
+	'automation.sendRichMessage',
+	'automation.getProviderSettings',
+	'automation.upsertProviderSetting',
+	'automation.syncProviderSetting',
 ]);
 // Action descriptions in the style Zapier's review asks for; the spec's own read as API notes.
 const ACTION_DESCRIPTIONS = {
@@ -187,6 +215,47 @@ const ACTION_DESCRIPTIONS = {
 	'comment.importGetFetchedComments': 'Lists the comments imported from the network for a post.',
 	'comment.importActionFetchedComment':
 		'Hides, unhides, likes, unlikes, approves, rejects or deletes an imported comment directly on the network.',
+	'conversation.getList': 'Lists the Instagram and Facebook direct message conversations of a team, most recently active first.',
+	'conversation.get':
+		'Finds a direct message conversation by ID, with its participant, unread count and whether you can still reply.',
+	'conversation.update': 'Sets the inbox status of a conversation to open or archived.',
+	'conversation.getMessages':
+		'Lists the messages of a direct message conversation with their attachments, reactions and delivery status.',
+	'conversation.sendMessage':
+		"Sends a direct message with text, media, buttons, quick replies or a carousel in a conversation. Meta allows it within 24 hours of the participant's last message.",
+	'conversation.reactMessage':
+		'Adds or removes a reaction on a message in a conversation. Only Instagram supports reactions, with the heart.',
+	'conversation.markRead': 'Marks a conversation as read, which resets its unread count.',
+	'conversation.privateReply':
+		'Answers an imported Facebook or Instagram comment with a direct message to its author. Meta allows one text-only reply per comment.',
+	'conversation.archive': 'Moves a conversation out of the active inbox. A new incoming message reopens it.',
+	'conversation.open': 'Moves an archived conversation back into the active inbox.',
+	'automation.getFlows': 'Lists the automation flows of a team, newest first.',
+	'automation.createFlow':
+		'Creates an automation flow, such as an auto-reply to comments or direct messages, from a trigger and its steps. The flow stays a draft until you publish it.',
+	'automation.copyFlows':
+		"Copies one or every automation flow of a team to another team as drafts, ready to point at that team's social accounts.",
+	'automation.getFlow': 'Finds an automation flow by ID, with its status and its draft and published definitions.',
+	'automation.updateFlow':
+		'Updates the name or definition of an automation flow. A new definition is saved as a draft and goes live when you publish it.',
+	'automation.deleteFlow': 'Permanently deletes an automation flow and cancels its waiting runs. Past runs stay readable.',
+	'automation.publishFlow':
+		'Validates the saved draft of an automation flow and makes it live, so matching comments and messages start triggering it.',
+	'automation.pauseFlow': 'Stops a live automation flow from running on new events, keeping its configuration.',
+	'automation.activateFlow': 'Makes a paused or archived automation flow live again with its published version.',
+	'automation.archiveFlow': 'Retires an automation flow without deleting it. Archived flows never run.',
+	'automation.getFlowExecutions': 'Lists the runs of an automation flow, newest first, with how each one ended.',
+	'automation.getExecution': 'Retrieves an automation run by ID, with its input event, the result of each step and any error.',
+	'automation.testFlow':
+		'Runs an automation flow once on a real conversation or comment and returns the run. Its steps really send messages.',
+	'automation.sendRichMessage':
+		'Sends a message with uploaded media, buttons, quick replies or a carousel in a conversation, in the format of an automation step.',
+	'automation.getProviderSettings':
+		'Lists the Instagram ice breakers and Facebook persistent menus saved for the social accounts of a team.',
+	'automation.upsertProviderSetting':
+		'Saves the Instagram ice breakers or the Facebook persistent menu of a social account. Sync Automation Provider Setting pushes it to the network.',
+	'automation.syncProviderSetting':
+		'Pushes saved ice breakers or a saved persistent menu to Instagram or Facebook, for example after a failed sync.',
 };
 // Operations generated only for their fields and samples, which the hand-written triggers reuse.
 const TRIGGER_SOURCES = new Set(['post.getList']);
@@ -238,8 +307,11 @@ const ACRONYMS = {
 // Resource value -> display name, plural noun for "Get many" actions.
 const RESOURCES = {
 	analytics: { name: 'Analytics', plural: 'analytics' },
+	automation: { name: 'Automation', plural: 'automation flows' },
+	automationProviderSetting: { name: 'Automation Provider Setting', plural: 'automation provider settings' },
 	comment: { name: 'Comment', plural: 'comments' },
 	commentImport: { name: 'Comment Import', plural: 'comment imports' },
+	conversation: { name: 'Conversation', plural: 'conversations' },
 	organization: { name: 'Organization' },
 	post: { name: 'Post', plural: 'posts' },
 	postHistoryImport: { name: 'Post History Import', plural: 'post history imports' },
@@ -290,6 +362,27 @@ const OPERATION_NAMES = {
 	'comment.importGetFetchedComments': 'Get Fetched Comments',
 	'comment.importActionFetchedComment': 'Act on Fetched Comment',
 	'comment.importGetById': 'Get',
+	'conversation.getList': GET_MANY,
+	'conversation.reactMessage': 'React to Message',
+	'conversation.markRead': 'Mark as Read',
+	'conversation.privateReply': 'Send Private Reply',
+	'automation.getFlows': GET_MANY,
+	'automation.createFlow': 'Create',
+	'automation.copyFlows': 'Copy',
+	'automation.getFlow': 'Get',
+	'automation.updateFlow': 'Update',
+	'automation.deleteFlow': 'Delete',
+	'automation.publishFlow': 'Publish',
+	'automation.pauseFlow': 'Pause',
+	'automation.activateFlow': 'Activate',
+	'automation.archiveFlow': 'Archive',
+	'automation.getFlowExecutions': 'Get Executions',
+	'automation.getExecution': 'Get Execution',
+	'automation.testFlow': 'Test',
+	'automation.sendRichMessage': 'Send Rich Message',
+	'automation.getProviderSettings': GET_MANY,
+	'automation.upsertProviderSetting': 'Create or Update',
+	'automation.syncProviderSetting': 'Sync',
 };
 
 // Spec descriptions that are wrong or read badly as help text. Keys are `<operationId>.<field>` or `<field>`.
@@ -307,7 +400,100 @@ const DESCRIPTION_OVERRIDES = {
 			[`analytics.${op}.importedPostId`, 'Use instead of Post ID and Platform Type for an imported post.'],
 		]),
 	),
+	conversationId: 'From New Direct Message or Get Many Conversations.',
+	'conversation.reactMessage.messageId': 'From Get Messages (Conversation).',
+	'conversation.reactMessage.reaction': 'Leave empty for Love. Only Instagram supports reactions, and only Love.',
+	'conversation.markRead.readAt':
+		'Leave empty for now. An earlier time keeps the messages that arrived after it unread.',
+	'conversation.sendMessage.text':
+		'Up to 1,000 characters. A message needs Text, Attachments or a Carousel, and Buttons or Quick Replies need Text.',
+	'conversation.sendMessage.type': 'Image, Video, Audio or File.',
+	'conversation.sendMessage.url': 'Public HTTPS URL of the file.',
+	'conversation.sendMessage.buttons':
+		'Up to 3 buttons, for example `[{"type": "URL", "label": "Track order", "url": "https://example.com/track"}, {"type": "POSTBACK", "label": "Talk to us", "payload": "HELP"}]`. Use either Buttons or Quick Replies, never both. Phone buttons work on Facebook only.',
+	'conversation.sendMessage.cards':
+		'Up to 10 cards, for example `[{"title": "Classic Tee", "subtitle": "29 EUR", "imageUrl": "https://example.com/tee.jpg", "buttons": [{"type": "URL", "label": "Buy", "url": "https://example.com/tee"}]}]`. A carousel goes without attachments, buttons or quick replies.',
+	'conversation.sendMessage.replyToMessageId':
+		'Links the message to an earlier one in bundle.social. Instagram and Messenger do not show it as a quoted reply.',
+	'conversation.privateReply.fetchedCommentId':
+		'ID of an imported comment, from New Comment or Get Fetched Comments (Comment Import). Meta allows one private reply per comment, within 7 days of it.',
+	'conversation.privateReply.text': 'Up to 1,000 characters. Private replies are text only.',
+	'automation.sendRichMessage.text':
+		'Up to 1,000 characters. Buttons or Quick Replies need Text.',
+	'automation.sendRichMessage.uploadId': 'From Upload File or Upload From URL.',
+	'automation.sendRichMessage.buttons':
+		'Up to 3 buttons, each with your own `id`, for example `[{"id": "track", "type": "URL", "label": "Track order", "url": "https://example.com/track"}, {"id": "help", "type": "POSTBACK", "label": "Talk to us", "payload": "HELP"}]`. Use either Buttons or Quick Replies, never both.',
+	'automation.sendRichMessage.cards':
+		'Up to 10 cards, each with your own `id`, for example `[{"id": "tee", "title": "Classic Tee", "imageUploadId": "...", "buttons": [{"id": "buy", "type": "URL", "label": "Buy", "url": "https://example.com/tee"}]}]`.',
+	'automation.copyFlows.flowId': 'Leave empty to copy every flow of the source team, archived ones included.',
+	'automation.testFlow.input':
+		'The event to run the steps on. DM and click flows need the `conversationId` of a real conversation, comment flows the `fetchedCommentId` of a real comment, plus `text` or `payload` when a condition reads them, for example `{"conversationId": "...", "text": "How much is the Pro plan?"}`.',
+	'automation.upsertProviderSetting.platform': 'Instagram for ice breakers, Facebook for the persistent menu.',
+	'automation.upsertProviderSetting.config':
+		'Instagram ice breakers, up to 4: `{"iceBreakers": [{"question": "What are your prices?", "payload": "ICE_PRICING"}]}`. Facebook persistent menu, up to 3 items: `{"getStartedPayload": "GET_STARTED", "items": [{"type": "POSTBACK", "title": "Pricing", "payload": "MENU_PRICING"}, {"type": "URL", "title": "Website", "url": "https://example.com"}]}`. A tap sends its payload to Button Clicked flows.',
+	'automation.upsertProviderSetting.status':
+		'Leave empty to save a draft. Disabled removes the setting from the network on the next sync.',
+	...Object.fromEntries(
+		['createFlow', 'updateFlow'].flatMap((op) => [
+			[`automation.${op}.platformScope`, "Has to fit the trigger's platform. Both means Instagram or Facebook."],
+			[`automation.${op}.type`, 'Comment Created needs a Post. The others react to direct messages and taps.'],
+			[
+				`automation.${op}.postId`,
+				'Comment Created only: the bundle.social post, published on the selected account, whose comments start the flow. Leave empty for the other triggers.',
+			],
+			[
+				`automation.${op}.definition__trigger__postId`,
+				'Comment Created only: the post, published on the selected account, whose comments start the flow. Leave empty for the other triggers.',
+			],
+			[
+				`automation.${op}.keywords`,
+				'Comment and DM triggers: whole words or phrases that start the flow. Leave empty to match every comment or message.',
+			],
+			[`automation.${op}.matchMode`, 'Any: one keyword is enough. All: every keyword has to appear.'],
+			[`automation.${op}.caseSensitive`, 'Match the keywords with their exact case.'],
+			[
+				`automation.${op}.payloads`,
+				'Quick Reply Clicked and Button Clicked triggers: the payloads that start the flow. Leave empty to match any tap.',
+			],
+			[
+				`automation.${op}.senderExternalIds`,
+				'Only start the flow for these people, by platform user ID (External Participant ID on a conversation). Handy for testing on your own profile.',
+			],
+			[
+				`automation.${op}.actionDelaySeconds`,
+				'Seconds to wait before the steps run, up to 86400 (24 hours). 5 to 10 is recommended on TikTok.',
+			],
+			[`automation.${op}.id`, 'Optional ID of your choice, up to 36 characters, recorded on every run as Trigger ID.'],
+			[
+				`automation.${op}.steps`,
+				'Steps run in order, for example `[{"type": "SEND_MESSAGE", "message": {"text": "Thanks for your message!"}}]`. Types: CONDITION, SEND_MESSAGE, SEND_PRIVATE_REPLY, SEND_PUBLIC_COMMENT_REPLY, LIKE_COMMENT, ARCHIVE_CONVERSATION, OPEN_CONVERSATION. The flow builder in the bundle.social dashboard shows the definition JSON of a flow. A definition replaces the whole draft, so set the full trigger and every step.',
+			],
+		]),
+	),
 };
+
+// Spec fields left out of the form because the API rejects them or they skip a step users rely on.
+// Keys are `<operationId>.<dotted body path>`.
+const OMITTED_FIELDS = new Set([
+	// Private replies are text only: attachments or a carousel answer 400.
+	'conversation.privateReply.content.attachments',
+	'conversation.privateReply.content.carousel',
+	// A definition sent on publish skips the draft, so Test Automation keeps running the old one; Update saves it.
+	'automation.publishFlow.definition',
+]);
+const usedOmittedFields = new Set();
+
+function withoutOmitted(schema, dottedPath) {
+	if (!schema?.properties) return schema;
+	const properties = Object.fromEntries(
+		Object.entries(schema.properties).filter(([key]) => {
+			const id = `${currentOperationId}.${dottedPath ? `${dottedPath}.` : ''}${key}`;
+			if (OMITTED_FIELDS.has(id)) usedOmittedFields.add(id);
+			return !OMITTED_FIELDS.has(id);
+		}),
+	);
+	return { ...schema, properties };
+}
 
 // Body fields the API requires although the spec marks them optional. Keys are `<operationId>.<field>`.
 const REQUIRED_OVERRIDES = new Set([
@@ -330,6 +516,8 @@ const DYNAMIC = {
 	teamId: 'team_list.id.name',
 	fromTeamId: 'team_list.id.name',
 	toTeamId: 'team_list.id.name',
+	sourceTeamId: 'team_list.id.name',
+	targetTeamId: 'team_list.id.name',
 	socialAccountId: 'social_account_list.id.name',
 	socialAccountIds: 'social_account_list.id.name',
 };
@@ -341,6 +529,7 @@ const PATH_DYNAMIC = {
 const TEAM_SCOPED_DYNAMIC = {
 	postId: { dynamic: 'post_list.id.name', label: 'Post' },
 	internalPostId: { dynamic: 'post_list.id.name', label: 'Post' },
+	definition__trigger__postId: { dynamic: 'post_list.id.name', label: 'Definition: Trigger: Post' },
 };
 const DYNAMIC_HELP = 'Pick from the list, or map an ID from an earlier step.';
 const SENSITIVE_NAME = /secret|password|token|apikey/i;
@@ -439,12 +628,16 @@ function clip(text, max) {
 	return text.slice(0, max - 3).replace(/\s+\S*$/, '') + '...';
 }
 
-// Help text is Markdown in Zapier, so links and code spans stay as they are.
+// Help text is Markdown in Zapier, so links and code spans stay as they are, JSON examples included.
 function helpText(text) {
 	if (!text) return undefined;
 	const out = String(text).replace(/\s+/g, ' ').trim();
 	if (!out) return undefined;
-	return clip(fixCasing(capitalize(out)), MAX_HELP_TEXT);
+	const fixed = capitalize(out)
+		.split(/(`[^`]*`)/)
+		.map((part) => (part.startsWith('`') ? part : fixCasing(part)))
+		.join('');
+	return clip(fixed, MAX_HELP_TEXT);
 }
 
 function firstSentence(text, max = 200) {
@@ -604,7 +797,7 @@ function buildFields(key, rawSchema, ctx) {
 	if (kind === 'object') {
 		const required = new Set(s.required ?? []);
 		const out = { fields: [], params: [] };
-		for (const [childKey, childSchema] of Object.entries(s.properties)) {
+		for (const [childKey, childSchema] of Object.entries(withoutOmitted(s, ctx.to).properties)) {
 			if (resolveSchema(childSchema).format === 'binary') continue;
 			const child = buildFields(childKey, childSchema, {
 				...ctx,
@@ -891,6 +1084,8 @@ function buildOperation(operationId, method, apiPath, op) {
 			pagination = { itemsKey, pageSize: Math.min(DEFAULT_PAGE_SIZE, typeof max === 'number' ? max : DEFAULT_PAGE_SIZE) };
 		}
 	}
+	// The runtime pages by offset, and the API rejects a cursor together with an offset.
+	const pagedByRuntime = (param) => pagination && ['offset', 'limit', 'cursor'].includes(param.name);
 
 	// A single record fetched by its ID or key is a Zapier search, so it can feed "find" steps.
 	const response = resolveSchema(responseSchema);
@@ -941,7 +1136,7 @@ function buildOperation(operationId, method, apiPath, op) {
 	}
 
 	for (const param of queryParams.filter((p) => p.required)) {
-		if (pagination && (param.name === 'offset' || param.name === 'limit')) continue;
+		if (pagedByRuntime(param)) continue;
 		push(
 			buildFields(param.name, schemaOf(param), {
 				key: uniqueKey(param.name, 'query'),
@@ -1074,7 +1269,7 @@ function buildOperation(operationId, method, apiPath, op) {
 		addBodyProperties(multipartSchema, false);
 	} else if (jsonSchema) {
 		body = 'json';
-		const root = resolveSchema(jsonSchema);
+		const root = withoutOmitted(resolveSchema(jsonSchema), '');
 		if (root.type === 'object' && hasProperties(root) && !isRecord(root)) {
 			bodySwitch = true;
 			used.add('bodyInput');
@@ -1109,7 +1304,7 @@ function buildOperation(operationId, method, apiPath, op) {
 	}
 
 	for (const param of queryParams.filter((p) => !p.required)) {
-		if (pagination && (param.name === 'offset' || param.name === 'limit')) continue;
+		if (pagedByRuntime(param)) continue;
 		push(
 			buildFields(param.name, schemaOf(param), {
 				key: uniqueKey(param.name, 'query'),
@@ -1334,6 +1529,8 @@ function main() {
 	if (missing.length) throw new Error(`Operations not found in the spec: ${missing.join(', ')}`);
 	const unusedRequired = [...REQUIRED_OVERRIDES].filter((id) => !usedRequiredOverrides.has(id));
 	if (unusedRequired.length) throw new Error(`Required overrides match no body field: ${unusedRequired.join(', ')}`);
+	const unusedOmitted = [...OMITTED_FIELDS].filter((id) => !usedOmittedFields.has(id));
+	if (unusedOmitted.length) throw new Error(`Omitted fields match no body field: ${unusedOmitted.join(', ')}`);
 	for (const built of buildCustomOperations(spec)) (byResource[built.resource] ??= []).push(built);
 
 	// Zapier keys are unique per action type; labels should be too, or the action list gets confusing.

@@ -1,6 +1,6 @@
 # bundle.social for Zapier
 
-This is the [Zapier](https://zapier.com) integration for [bundle.social](https://bundle.social). It covers the whole publishing workflow from your Zaps: set up teams, connect social accounts, upload media, schedule posts to 15 social networks and track how they perform, with unlimited social accounts.
+This is the [Zapier](https://zapier.com) integration for [bundle.social](https://bundle.social). It covers the whole publishing workflow from your Zaps: set up teams, connect social accounts, upload media, schedule posts to 15 social networks and track how they perform, with unlimited social accounts. It also answers Instagram and Facebook direct messages and manages comment and DM automations.
 
 [Zapier](https://zapier.com) connects thousands of apps, so a post can start from a form, a spreadsheet row, a CMS entry or anything else your Zaps already react to.
 
@@ -31,7 +31,10 @@ The key is only ever sent to `https://api.bundle.social`, never to the hosts fil
 - **Upload File** takes files up to 90 MB. **Upload Large File** takes files up to 5 GB: it sends the file straight to storage and adds it to the media library in one step. The *Initialize*, *Finalize* and *Multipart* upload actions expose the individual steps for files above 5 GB or custom flows.
 - **Update Post** shows the settings of every platform: changing **Social Account Types** there changes the platforms of the post, so it does not hide sections. Fields left empty keep their current value.
 - **Get Post Analytics** takes the **Post ID** together with the **Platform Type** the post went out on.
-- Every action with a request body has **Specify Body**. Switch it to **Using JSON** to send the raw request body, which is handy when the body comes from an earlier step.
+- Direct messages and automations are switched on per organization by [bundle.social support](mailto:support@bundle.social); until then their actions fail. Each Instagram or Facebook account also needs **Enable Messaging (Social Account)** before it receives DMs.
+- **Send Message (Conversation)** only works within 24 hours of the participant's last message, which is Meta's rule. To answer a comment with a DM, use **Send Private Reply (Conversation)**: one text-only reply per comment.
+- **Create Automation** takes the trigger as fields and the steps as JSON. The flow builder in the bundle.social dashboard shows the definition JSON of any flow you build there. A flow stays a draft until **Publish Automation**, and a definition sent with **Update Automation** replaces the whole draft.
+- Every action with a request body has **Specify Body**. Switch it to **Using JSON** to send the raw request body, which is handy for automation flow definitions or when the body comes from an earlier step.
 - Validation errors from the API list each invalid field, for example `data.TIKTOK.text: Required`.
 - Fields that take several values (for example **Upload IDs**) accept one value per line, a comma-separated list or a JSON array.
 
@@ -53,6 +56,12 @@ The key is only ever sent to `https://api.bundle.social`, never to the hosts fil
 2. **bundle.social > Get Post Analytics**: map the post `id`, and the platform it went out on into **Platform Type**.
 3. **Google Sheets > Create Spreadsheet Row** (or any app): log the likes, comments, shares and views.
 
+### Example: answer new direct messages
+
+1. **bundle.social > New Direct Message**: your team.
+2. Any app that writes the answer, for example an AI step that reads **Last Message Preview**.
+3. **bundle.social > Send Message (Conversation)**: map **Conversation ID** from step 1, and the answer into **Content: Text**.
+
 ## Triggers
 
 Triggers check bundle.social on Zapier's polling interval.
@@ -65,14 +74,17 @@ Triggers check bundle.social on Zapier's polling interval.
 | New Team | a team is created in your organization | `GET /api/v1/team/` |
 | New Social Account | a social account is connected to a team | `GET /api/v1/team/` |
 | New Comment | bundle.social imports a new comment on the selected post | `GET /api/v1/comment/import/comments` |
+| New Direct Message | someone sends a direct message to a connected Instagram or Facebook account | `GET /api/v1/conversations/` |
 
-The post triggers can be narrowed to posts on specific platforms (New Post also to a status), New Social Account to one team.
+The post triggers can be narrowed to posts on specific platforms (New Post also to a status), New Social Account to one team, New Direct Message to one account or platform.
+
+**New Direct Message** fires once for every message the participant sends, never for your own replies, so a Zap that answers with Send Message does not trigger itself. It returns the conversation: map its **Conversation ID** into the conversation actions, and add **Get Messages (Conversation)** for the full thread.
 
 ## Actions
 
 <!-- actions:start -->
 
-70 actions, generated from the bundle.social OpenAPI spec.
+97 actions, generated from the bundle.social OpenAPI spec.
 
 | Action | What it does | Endpoint |
 |---|---|---|
@@ -83,6 +95,23 @@ The post triggers can be narrowed to posts on specific platforms (New Post also 
 | Get Social Account Analytics | Retrieves profile metrics such as followers, reach and impressions for a connected social account. | `GET /api/v1/analytics/social-account` |
 | Refresh Post Analytics | Fetches fresh analytics for a published post from the network right away. Uses network rate limits, so use it sparingly. | `POST /api/v1/analytics/post/force` |
 | Refresh Social Account Analytics | Fetches fresh analytics for a connected social account from the network right away. Uses network rate limits, so use it sparingly. | `POST /api/v1/analytics/social-account/force` |
+| Activate Automation | Makes a paused or archived automation flow live again with its published version. | `POST /api/v1/automations/{id}/activate` |
+| Archive Automation | Retires an automation flow without deleting it. Archived flows never run. | `POST /api/v1/automations/{id}/archive` |
+| Copy Automation | Copies one or every automation flow of a team to another team as drafts, ready to point at that team's social accounts. | `POST /api/v1/automations/copy` |
+| Create Automation | Creates an automation flow, such as an auto-reply to comments or direct messages, from a trigger and its steps. The flow stays a draft until you publish it. | `POST /api/v1/automations` |
+| Delete Automation | Permanently deletes an automation flow and cancels its waiting runs. Past runs stay readable. | `DELETE /api/v1/automations/{id}` |
+| Find Automation | Finds an automation flow by ID, with its status and its draft and published definitions. | `GET /api/v1/automations/{id}` |
+| Get Execution (Automation) | Retrieves an automation run by ID, with its input event, the result of each step and any error. | `GET /api/v1/automation-executions/{id}` |
+| Get Executions (Automation) | Lists the runs of an automation flow, newest first, with how each one ended. | `GET /api/v1/automations/{id}/executions` |
+| Get Many Automation Flows | Lists the automation flows of a team, newest first. | `GET /api/v1/automations` |
+| Pause Automation | Stops a live automation flow from running on new events, keeping its configuration. | `POST /api/v1/automations/{id}/pause` |
+| Publish Automation | Validates the saved draft of an automation flow and makes it live, so matching comments and messages start triggering it. | `POST /api/v1/automations/{id}/publish` |
+| Send Rich Message (Automation) | Sends a message with uploaded media, buttons, quick replies or a carousel in a conversation, in the format of an automation step. | `POST /api/v1/automation-rich-messages/conversations/{conversationId}` |
+| Test Automation | Runs an automation flow once on a real conversation or comment and returns the run. Its steps really send messages. | `POST /api/v1/automations/{id}/test` |
+| Update Automation | Updates the name or definition of an automation flow. A new definition is saved as a draft and goes live when you publish it. | `PATCH /api/v1/automations/{id}` |
+| Create or Update Automation Provider Setting | Saves the Instagram ice breakers or the Facebook persistent menu of a social account. Sync Automation Provider Setting pushes it to the network. | `PUT /api/v1/automation-provider-settings/{socialAccountId}/{type}` |
+| Get Many Automation Provider Settings | Lists the Instagram ice breakers and Facebook persistent menus saved for the social accounts of a team. | `GET /api/v1/automation-provider-settings` |
+| Sync Automation Provider Setting | Pushes saved ice breakers or a saved persistent menu to Instagram or Facebook, for example after a failed sync. | `POST /api/v1/automation-provider-settings/{id}/sync` |
 | Create Comment | Schedules a comment, or publishes it right away, on a published post or as a reply to a comment, for example the first comment of an Instagram or LinkedIn post. | `POST /api/v1/comment/` |
 | Delete Comment | Permanently deletes a comment from bundle.social. Deleting a scheduled comment cancels it. | `DELETE /api/v1/comment/{id}` |
 | Find Comment | Finds a comment created through bundle.social by ID, with its publishing status and errors. | `GET /api/v1/comment/{id}` |
@@ -94,6 +123,16 @@ The post triggers can be narrowed to posts on specific platforms (New Post also 
 | Find Comment Import | Finds a comment import by ID, with its status, progress and result. | `GET /api/v1/comment/import/{importId}` |
 | Get Fetched Comments (Comment Import) | Lists the comments imported from the network for a post. | `GET /api/v1/comment/import/comments` |
 | Get Many Comment Imports | Lists the comment imports of a team with their status. | `GET /api/v1/comment/import` |
+| Archive Conversation | Moves a conversation out of the active inbox. A new incoming message reopens it. | `POST /api/v1/conversations/{id}/archive` |
+| Find Conversation | Finds a direct message conversation by ID, with its participant, unread count and whether you can still reply. | `GET /api/v1/conversations/{id}` |
+| Get Many Conversations | Lists the Instagram and Facebook direct message conversations of a team, most recently active first. | `GET /api/v1/conversations/` |
+| Get Messages (Conversation) | Lists the messages of a direct message conversation with their attachments, reactions and delivery status. | `GET /api/v1/conversations/{id}/messages` |
+| Mark as Read (Conversation) | Marks a conversation as read, which resets its unread count. | `POST /api/v1/conversations/{id}/read` |
+| Open Conversation | Moves an archived conversation back into the active inbox. | `POST /api/v1/conversations/{id}/open` |
+| React to Message (Conversation) | Adds or removes a reaction on a message in a conversation. Only Instagram supports reactions, with the heart. | `POST /api/v1/conversations/{id}/messages/{messageId}/reaction` |
+| Send Message (Conversation) | Sends a direct message with text, media, buttons, quick replies or a carousel in a conversation. Meta allows it within 24 hours of the participant's last message. | `POST /api/v1/conversations/{id}/messages` |
+| Send Private Reply (Conversation) | Answers an imported Facebook or Instagram comment with a direct message to its author. Meta allows one text-only reply per comment. | `POST /api/v1/conversations/private-reply` |
+| Update Conversation | Sets the inbox status of a conversation to open or archived. | `PATCH /api/v1/conversations/{id}` |
 | Get Comments Usage (Organization) | Retrieves how many comments your organization has used against its plan limit this billing period. | `GET /api/v1/organization/usage/comments` |
 | Get Daily Limits Usage (Organization) | Retrieves how many posts a social account has published on a given day against the network's daily cap. | `GET /api/v1/organization/usage/daily-limits` |
 | Get Imports Usage (Organization) | Retrieves the post history import usage of each social account, by team or platform. | `GET /api/v1/organization/usage/imports` |
