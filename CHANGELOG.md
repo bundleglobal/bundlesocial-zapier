@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.5.0...v1.6.0) (2026-11-04)
+
+
+### Features
+
+* DM usage, TikTok locations and post settings ([#7](https://github.com/bundleglobal/bundlesocial-zapier/issues/7)) ([476a444](https://github.com/bundleglobal/bundlesocial-zapier/commit/476a444aa623f0dea3d9f1300e2b1298add37ee3))
+
 # [1.5.0](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.4.0...v1.5.0) (2026-11-04)
 
 
