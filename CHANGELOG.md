@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.4.0...v1.5.0) (2026-11-04)
+
+
+### Features
+
+* Pinterest carousel Pins ([#6](https://github.com/bundleglobal/bundlesocial-zapier/issues/6)) ([4adadff](https://github.com/bundleglobal/bundlesocial-zapier/commit/4adadfff32903c86c1ecd633b5b69c84b97941a2))
+
 # [1.4.0](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.3.0...v1.4.0) (2026-11-02)
 
 
