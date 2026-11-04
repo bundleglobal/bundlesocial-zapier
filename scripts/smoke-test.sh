@@ -120,6 +120,8 @@ POST_JSON="$(curl -fsS -H "x-api-key: $authData_apiKey" "${BUNDLESOCIAL_BASE_URL
 POST_PLATFORM="$(node -e 'const p = JSON.parse(require("fs").readFileSync(0, "utf8") || "{}"); const d = p.data || {}; console.log(Object.keys(d).find((k) => d[k]) || "")' <<<"$POST_JSON" 2>/dev/null)"
 # An Instagram or Facebook account for the draft automation flow.
 DM_ACCOUNT="$(node -e 'const t = JSON.parse(require("fs").readFileSync(0, "utf8") || "{}"); const a = (t.socialAccounts || []).find((s) => !s.deletedAt && ["INSTAGRAM", "FACEBOOK"].includes(s.type)); console.log(a ? `${a.type} ${a.id}` : "")' <<<"$TEAM_JSON" 2>/dev/null)"
+# A TikTok account, for the TikTok location and post settings reads.
+TIKTOK_ACCOUNT="$(node -e 'const t = JSON.parse(require("fs").readFileSync(0, "utf8") || "{}"); const a = (t.socialAccounts || []).find((s) => !s.deletedAt && s.type === "TIKTOK"); console.log(a ? a.id : "")' <<<"$TEAM_JSON" 2>/dev/null)"
 echo "  team $TEAM, post $POST (${POST_PLATFORM:-unknown platform}), draft platform ${PLATFORM:-none connected}"
 
 section "2. Triggers"
@@ -142,6 +144,7 @@ run ok create organization_get_posts_usage
 run ok create organization_get_comments_usage
 run ok create organization_get_uploads_usage
 run ok create organization_get_imports_usage "{\"teamId\":\"$TEAM\"}"
+run ok create organization_get_dm_usage "{\"teamId\":\"$TEAM\"}"
 [ -n "$ACCOUNT" ] && run ok create organization_get_daily_limits_usage "{\"socialAccountId\":\"$ACCOUNT\"}"
 run ok create team_get_all
 run ok search team_get "{\"id\":\"$TEAM\"}"
@@ -152,6 +155,10 @@ run ok create upload_get_all "{\"teamId\":\"$TEAM\",\"includePosts\":\"false\"}"
 run ok create post_get_all "{\"teamId\":\"$TEAM\"}"
 run ok search post_get "{\"id\":\"$POST\"}"
 run empty search post_get_by_reference_key '{"referenceKey":"zapier-smoke-missing"}'
+if [ -n "$TIKTOK_ACCOUNT" ]; then
+	run ok create tiktok_get_post_settings "{\"teamId\":\"$TEAM\"}"
+	run ok create tiktok_search_locations "{\"teamId\":\"$TEAM\",\"q\":\"Warsaw\"}"
+fi
 [ -n "$PLATFORM" ] && run ok create post_get_reconnect_candidates "{\"teamId\":\"$TEAM\",\"type\":\"$PLATFORM\"}"
 run ok create post_history_import_get_all "{\"teamId\":\"$TEAM\"}"
 IMPORT="$(json imports.0.id 2>/dev/null || true)"

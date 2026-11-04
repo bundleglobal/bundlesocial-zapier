@@ -30,6 +30,7 @@ const PUBLISHED_OPERATIONS = new Set([
 	'organization.getUploadsUsage',
 	'organization.getDailyLimitsUsage',
 	'organization.getImportsUsage',
+	'organization.getMessagesUsage',
 	'team.createTeam',
 	'team.getTeam',
 	'team.getList',
@@ -57,6 +58,8 @@ const PUBLISHED_OPERATIONS = new Set([
 	'post.delete',
 	'post.getReconnectSocialAccountCandidates',
 	'post.reconnectSocialAccount',
+	'misc.tiktok.searchLocations',
+	'misc.tiktok.getPostSettings',
 	'postImport.create',
 	'postImport.getStatus',
 	'postImport.getById',
@@ -132,6 +135,8 @@ const ACTION_DESCRIPTIONS = {
 	'organization.getDailyLimitsUsage':
 		"Retrieves how many posts a social account has published on a given day against the network's daily cap.",
 	'organization.getImportsUsage': 'Retrieves the post history import usage of each social account, by team or platform.',
+	'organization.getMessagesUsage':
+		'Retrieves how many direct messages and automation runs each Instagram, Facebook and TikTok account has used this calendar month (UTC) against its monthly limits.',
 	'team.createTeam': 'Creates a new team in your bundle.social organization.',
 	'team.getTeam': 'Finds a team by ID, with its connected social accounts and settings.',
 	'team.updateTeam': "Updates a team's name or avatar. Fields left empty keep their current value.",
@@ -168,6 +173,10 @@ const ACTION_DESCRIPTIONS = {
 		'Lists the posts that lost their social account when it was disconnected and can be moved to a newly connected account of the same network.',
 	'post.reconnectSocialAccount':
 		"Moves posts that lost their social account to the team's newly connected account of the same network, so scheduled posts publish instead of failing.",
+	'misc.tiktok.searchLocations':
+		'Searches the location tags the TikTok account of a team can add to a post, for Location ID and Location Name in Create Post.',
+	'misc.tiktok.getPostSettings':
+		'Retrieves the privacy levels, comment, Duet and Stitch settings and maximum video length the TikTok account of a team allows.',
 	'postImport.create':
 		'Starts importing the posts a social account published before it was connected, together with their analytics.',
 	'postImport.getStatus': 'Lists the post history imports of a team with their status.',
@@ -317,12 +326,14 @@ const RESOURCES = {
 	postHistoryImport: { name: 'Post History Import', plural: 'post history imports' },
 	socialAccount: { name: 'Social Account', plural: 'social accounts' },
 	team: { name: 'Team', plural: 'teams' },
+	tiktok: { name: 'TikTok' },
 	upload: { name: 'Upload', plural: 'uploads' },
 };
 
 // Same names as the n8n node, so both integrations describe an endpoint the same way.
 const OPERATION_NAMES = {
 	'organization.getOrganization': 'Get',
+	'organization.getMessagesUsage': 'Get DM Usage',
 	'team.createTeam': 'Create',
 	'team.getTeam': 'Get',
 	'team.getList': GET_MANY,
@@ -398,6 +409,25 @@ const DESCRIPTION_OVERRIDES = {
 			[`analytics.${op}.postId`, 'Set together with Platform Type. For an imported post, set only Imported Post ID.'],
 			[`analytics.${op}.platformType`, 'Required with Post ID.'],
 			[`analytics.${op}.importedPostId`, 'Use instead of Post ID and Platform Type for an imported post.'],
+		]),
+	),
+	// Help the spec loses when an object is flattened into fields (keys are `<operationId>.<body path>`).
+	...Object.fromEntries(
+		['create', 'update'].flatMap((op) => [
+			[
+				`post.${op}.data.LINKEDIN.poll.question`,
+				'Poll question, up to 140 characters. A poll cannot be combined with media or a link, and cannot be edited after publishing.',
+			],
+			[`post.${op}.data.LINKEDIN.poll.options`, 'Required with Poll: Question. 2-4 options, up to 30 characters each.'],
+			[`post.${op}.data.LINKEDIN.poll.duration`, 'How long the poll stays open. Defaults to 3 days.'],
+			[
+				`post.${op}.data.PINTEREST.uploadIds`,
+				'One image or video, or 2-5 images for a carousel Pin. Carousel images must share one aspect ratio and cannot include videos. Order sets the slide order.',
+			],
+			[
+				`post.${op}.data.TIKTOK.locationId`,
+				'Location tag from **Search Locations (TikTok)**. Set together with Location Name.',
+			],
 		]),
 	),
 	conversationId: 'From New Direct Message or Get Many Conversations.',
@@ -772,9 +802,17 @@ function orderKeys(field) {
 // Operation being generated, for per-operation description overrides.
 let currentOperationId = '';
 
-function descriptionOf(key, rawSchema) {
+function descriptionOf(key, rawSchema, to) {
 	const s = resolveSchema(rawSchema);
-	return DESCRIPTION_OVERRIDES[`${currentOperationId}.${key}`] ?? DESCRIPTION_OVERRIDES[key] ?? s.description ?? rawSchema?.description;
+	// Only nested paths: a path parameter's `to` is the bare URL name (e.g. `id`), which other overrides use.
+	const byPath = to?.includes('.') ? DESCRIPTION_OVERRIDES[`${currentOperationId}.${to}`] : undefined;
+	return (
+		byPath ??
+		DESCRIPTION_OVERRIDES[`${currentOperationId}.${key}`] ??
+		DESCRIPTION_OVERRIDES[key] ??
+		s.description ??
+		rawSchema?.description
+	);
 }
 
 function asDropdown(field, { dynamic, label }) {
@@ -815,7 +853,7 @@ function buildFields(key, rawSchema, ctx) {
 
 	const field = { key: ctx.key, label: ctx.label };
 	let shape;
-	const description = descriptionOf(key, rawSchema);
+	const description = descriptionOf(key, rawSchema, ctx.to);
 	let help = helpText(description);
 
 	switch (kind) {
