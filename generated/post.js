@@ -338,6 +338,36 @@ module.exports = [
 				_platform: 'PINTEREST',
 			},
 			{
+				key: 'data__PINTEREST__carouselItems',
+				label: 'Pinterest: Carousel Items',
+				children: [
+					{
+						key: 'uploadId',
+						label: 'Upload ID',
+						type: 'string',
+						required: true,
+					},
+					{
+						key: 'title',
+						label: 'Title',
+						type: 'string',
+					},
+					{
+						key: 'description',
+						label: 'Description',
+						type: 'text',
+					},
+					{
+						key: 'link',
+						label: 'Link',
+						type: 'string',
+					},
+				],
+				group: 'data_pinterest',
+				_body: true,
+				_platform: 'PINTEREST',
+			},
+			{
 				key: 'data__PINTEREST__thumbnail',
 				label: 'Pinterest: Thumbnail',
 				type: 'string',
@@ -1105,6 +1135,33 @@ module.exports = [
 				_platform: 'TIKTOK',
 			},
 			{
+				key: 'data__TIKTOK__title',
+				label: 'TikTok: Title',
+				type: 'string',
+				helpText: 'Title of the photo post (IMAGE only).',
+				group: 'data_tiktok',
+				_body: true,
+				_platform: 'TIKTOK',
+			},
+			{
+				key: 'data__TIKTOK__locationId',
+				label: 'TikTok: Location ID',
+				type: 'string',
+				helpText: 'TikTok location tag ID.',
+				group: 'data_tiktok',
+				_body: true,
+				_platform: 'TIKTOK',
+			},
+			{
+				key: 'data__TIKTOK__locationName',
+				label: 'TikTok: Location Name',
+				type: 'string',
+				helpText: 'Name of the TikTok location tag.',
+				group: 'data_tiktok',
+				_body: true,
+				_platform: 'TIKTOK',
+			},
+			{
 				key: 'data__LINKEDIN__text',
 				label: 'LinkedIn: Text',
 				type: 'text',
@@ -1192,6 +1249,53 @@ module.exports = [
 				label: 'LinkedIn: Disable Reshare',
 				type: 'boolean',
 				helpText: 'Set to true if the post is not allowed to be reshared.',
+				group: 'data_linkedin',
+				_body: true,
+				_platform: 'LINKEDIN',
+			},
+			{
+				key: 'data__LINKEDIN__poll__question',
+				label: 'LinkedIn: Poll: Question',
+				type: 'string',
+				group: 'data_linkedin',
+				_body: true,
+				_platform: 'LINKEDIN',
+			},
+			{
+				key: 'data__LINKEDIN__poll__options',
+				label: 'LinkedIn: Poll: Options',
+				type: 'string',
+				list: true,
+				group: 'data_linkedin',
+				_body: true,
+				_platform: 'LINKEDIN',
+			},
+			{
+				key: 'data__LINKEDIN__poll__duration',
+				label: 'LinkedIn: Poll: Duration',
+				type: 'string',
+				choices: [
+					{
+						value: 'ONE_DAY',
+						label: 'One Day',
+						sample: 'ONE_DAY',
+					},
+					{
+						value: 'THREE_DAYS',
+						label: 'Three Days',
+						sample: 'THREE_DAYS',
+					},
+					{
+						value: 'SEVEN_DAYS',
+						label: 'Seven Days',
+						sample: 'SEVEN_DAYS',
+					},
+					{
+						value: 'FOURTEEN_DAYS',
+						label: 'Fourteen Days',
+						sample: 'FOURTEEN_DAYS',
+					},
+				],
 				group: 'data_linkedin',
 				_body: true,
 				_platform: 'LINKEDIN',
@@ -2246,6 +2350,14 @@ module.exports = [
 					},
 				},
 				{
+					key: 'data__PINTEREST__carouselItems',
+					in: 'body',
+					to: 'data.PINTEREST.carouselItems',
+					shape: {
+						kind: 'children',
+					},
+				},
+				{
 					key: 'data__PINTEREST__thumbnail',
 					in: 'body',
 					to: 'data.PINTEREST.thumbnail',
@@ -2720,6 +2832,21 @@ module.exports = [
 					},
 				},
 				{
+					key: 'data__TIKTOK__title',
+					in: 'body',
+					to: 'data.TIKTOK.title',
+				},
+				{
+					key: 'data__TIKTOK__locationId',
+					in: 'body',
+					to: 'data.TIKTOK.locationId',
+				},
+				{
+					key: 'data__TIKTOK__locationName',
+					in: 'body',
+					to: 'data.TIKTOK.locationName',
+				},
+				{
 					key: 'data__LINKEDIN__text',
 					in: 'body',
 					to: 'data.LINKEDIN.text',
@@ -2767,6 +2894,24 @@ module.exports = [
 					shape: {
 						kind: 'boolean',
 					},
+				},
+				{
+					key: 'data__LINKEDIN__poll__question',
+					in: 'body',
+					to: 'data.LINKEDIN.poll.question',
+				},
+				{
+					key: 'data__LINKEDIN__poll__options',
+					in: 'body',
+					to: 'data.LINKEDIN.poll.options',
+					shape: {
+						kind: 'list',
+					},
+				},
+				{
+					key: 'data__LINKEDIN__poll__duration',
+					in: 'body',
+					to: 'data.LINKEDIN.poll.duration',
 				},
 				{
 					key: 'data__YOUTUBE__type',
@@ -4290,6 +4435,35 @@ module.exports = [
 				_body: true,
 			},
 			{
+				key: 'data__PINTEREST__carouselItems',
+				label: 'Pinterest: Carousel Items',
+				children: [
+					{
+						key: 'uploadId',
+						label: 'Upload ID',
+						type: 'string',
+						required: true,
+					},
+					{
+						key: 'title',
+						label: 'Title',
+						type: 'string',
+					},
+					{
+						key: 'description',
+						label: 'Description',
+						type: 'text',
+					},
+					{
+						key: 'link',
+						label: 'Link',
+						type: 'string',
+					},
+				],
+				group: 'data_pinterest',
+				_body: true,
+			},
+			{
 				key: 'data__PINTEREST__thumbnail',
 				label: 'Pinterest: Thumbnail',
 				type: 'string',
@@ -4986,6 +5160,30 @@ module.exports = [
 				_body: true,
 			},
 			{
+				key: 'data__TIKTOK__title',
+				label: 'TikTok: Title',
+				type: 'string',
+				helpText: 'Title of the photo post (IMAGE only).',
+				group: 'data_tiktok',
+				_body: true,
+			},
+			{
+				key: 'data__TIKTOK__locationId',
+				label: 'TikTok: Location ID',
+				type: 'string',
+				helpText: 'TikTok location tag ID.',
+				group: 'data_tiktok',
+				_body: true,
+			},
+			{
+				key: 'data__TIKTOK__locationName',
+				label: 'TikTok: Location Name',
+				type: 'string',
+				helpText: 'Name of the TikTok location tag.',
+				group: 'data_tiktok',
+				_body: true,
+			},
+			{
 				key: 'data__LINKEDIN__text',
 				label: 'LinkedIn: Text',
 				type: 'text',
@@ -5066,6 +5264,50 @@ module.exports = [
 				label: 'LinkedIn: Disable Reshare',
 				type: 'boolean',
 				helpText: 'Set to true if the post is not allowed to be reshared.',
+				group: 'data_linkedin',
+				_body: true,
+			},
+			{
+				key: 'data__LINKEDIN__poll__question',
+				label: 'LinkedIn: Poll: Question',
+				type: 'string',
+				group: 'data_linkedin',
+				_body: true,
+			},
+			{
+				key: 'data__LINKEDIN__poll__options',
+				label: 'LinkedIn: Poll: Options',
+				type: 'string',
+				list: true,
+				group: 'data_linkedin',
+				_body: true,
+			},
+			{
+				key: 'data__LINKEDIN__poll__duration',
+				label: 'LinkedIn: Poll: Duration',
+				type: 'string',
+				choices: [
+					{
+						value: 'ONE_DAY',
+						label: 'One Day',
+						sample: 'ONE_DAY',
+					},
+					{
+						value: 'THREE_DAYS',
+						label: 'Three Days',
+						sample: 'THREE_DAYS',
+					},
+					{
+						value: 'SEVEN_DAYS',
+						label: 'Seven Days',
+						sample: 'SEVEN_DAYS',
+					},
+					{
+						value: 'FOURTEEN_DAYS',
+						label: 'Fourteen Days',
+						sample: 'FOURTEEN_DAYS',
+					},
+				],
 				group: 'data_linkedin',
 				_body: true,
 			},
@@ -6041,6 +6283,14 @@ module.exports = [
 					},
 				},
 				{
+					key: 'data__PINTEREST__carouselItems',
+					in: 'body',
+					to: 'data.PINTEREST.carouselItems',
+					shape: {
+						kind: 'children',
+					},
+				},
+				{
 					key: 'data__PINTEREST__thumbnail',
 					in: 'body',
 					to: 'data.PINTEREST.thumbnail',
@@ -6515,6 +6765,21 @@ module.exports = [
 					},
 				},
 				{
+					key: 'data__TIKTOK__title',
+					in: 'body',
+					to: 'data.TIKTOK.title',
+				},
+				{
+					key: 'data__TIKTOK__locationId',
+					in: 'body',
+					to: 'data.TIKTOK.locationId',
+				},
+				{
+					key: 'data__TIKTOK__locationName',
+					in: 'body',
+					to: 'data.TIKTOK.locationName',
+				},
+				{
 					key: 'data__LINKEDIN__text',
 					in: 'body',
 					to: 'data.LINKEDIN.text',
@@ -6562,6 +6827,24 @@ module.exports = [
 					shape: {
 						kind: 'boolean',
 					},
+				},
+				{
+					key: 'data__LINKEDIN__poll__question',
+					in: 'body',
+					to: 'data.LINKEDIN.poll.question',
+				},
+				{
+					key: 'data__LINKEDIN__poll__options',
+					in: 'body',
+					to: 'data.LINKEDIN.poll.options',
+					shape: {
+						kind: 'list',
+					},
+				},
+				{
+					key: 'data__LINKEDIN__poll__duration',
+					in: 'body',
+					to: 'data.LINKEDIN.poll.duration',
 				},
 				{
 					key: 'data__YOUTUBE__type',
