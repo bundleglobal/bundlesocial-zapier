@@ -58,6 +58,50 @@ describe('creates', () => {
 		});
 	});
 
+	it('builds a LinkedIn poll, Pinterest carousel slides and a TikTok location', async () => {
+		let body;
+		nock(API)
+			.post('/api/v1/post/', (sent) => {
+				body = sent;
+				return true;
+			})
+			.reply(200, { id: 'post-2' });
+
+		await appTester(App.creates.post_create.operation.perform, {
+			authData,
+			inputData: {
+				teamId: 'team-1',
+				postDate: '2026-01-15T10:00:00Z',
+				status: 'DRAFT',
+				socialAccountTypes: ['LINKEDIN', 'PINTEREST', 'TIKTOK'],
+				data__LINKEDIN__text: 'Vote',
+				data__LINKEDIN__poll__question: 'Tabs or spaces?',
+				data__LINKEDIN__poll__options: 'Tabs, Spaces',
+				data__LINKEDIN__poll__duration: 'SEVEN_DAYS',
+				data__PINTEREST__boardName: 'Ideas',
+				data__PINTEREST__uploadIds: 'up-1, up-2',
+				data__PINTEREST__carouselItems: [
+					{ uploadId: 'up-1', title: 'First slide', link: 'https://example.com/1' },
+					{ uploadId: 'up-2', description: '' },
+				],
+				data__TIKTOK__uploadIds: 'up-3',
+				data__TIKTOK__title: 'Photo title',
+				data__TIKTOK__locationId: 'loc-1',
+				data__TIKTOK__locationName: 'Warsaw',
+			},
+		});
+
+		expect(body.data).toEqual({
+			LINKEDIN: { text: 'Vote', poll: { question: 'Tabs or spaces?', options: ['Tabs', 'Spaces'], duration: 'SEVEN_DAYS' } },
+			PINTEREST: {
+				boardName: 'Ideas',
+				uploadIds: ['up-1', 'up-2'],
+				carouselItems: [{ uploadId: 'up-1', title: 'First slide', link: 'https://example.com/1' }, { uploadId: 'up-2' }],
+			},
+			TIKTOK: { uploadIds: ['up-3'], title: 'Photo title', locationId: 'loc-1', locationName: 'Warsaw' },
+		});
+	});
+
 	it('sends the raw body when Specify Body is Using JSON', async () => {
 		nock(API).post('/api/v1/team/', { name: 'From JSON' }).reply(200, { id: 'team-1' });
 

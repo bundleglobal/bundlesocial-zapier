@@ -11,5 +11,6 @@ module.exports = [
 	...require('./postHistoryImport'),
 	...require('./socialAccount'),
 	...require('./team'),
+	...require('./tiktok'),
 	...require('./upload'),
 ];

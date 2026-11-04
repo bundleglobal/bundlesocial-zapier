@@ -30,6 +30,7 @@ The key is only ever sent to `https://api.bundle.social`, never to the hosts fil
 - Media goes in two steps: upload it with **Upload File** (a file from an earlier step, or a URL) or **Upload From URL**, then map the returned `id` into **Upload IDs** of the post. **Upload From URL** is the best fit for public links and long videos, because bundle.social downloads the file itself.
 - **Upload File** takes files up to 90 MB. **Upload Large File** takes files up to 5 GB: it sends the file straight to storage and adds it to the media library in one step. The *Initialize*, *Finalize* and *Multipart* upload actions expose the individual steps for files above 5 GB or custom flows.
 - **Update Post** shows the settings of every platform: changing **Social Account Types** there changes the platforms of the post, so it does not hide sections. Fields left empty keep their current value.
+- To tag a TikTok location, run **Search Locations (TikTok)** first and map the `locationId` and `name` it returns into the post's **TikTok: Location ID** and **TikTok: Location Name**.
 - **Get Post Analytics** takes the **Post ID** together with the **Platform Type** the post went out on.
 - Direct messages and automations are switched on per organization by [bundle.social support](mailto:support@bundle.social); until then their actions fail. Each Instagram or Facebook account also needs **Enable Messaging (Social Account)** before it receives DMs.
 - **Send Message (Conversation)** only works within 24 hours of the participant's last message, which is Meta's rule. To answer a comment with a DM, use **Send Private Reply (Conversation)**: one text-only reply per comment.
@@ -84,7 +85,7 @@ The post triggers can be narrowed to posts on specific platforms (New Post also 
 
 <!-- actions:start -->
 
-97 actions, generated from the bundle.social OpenAPI spec.
+100 actions, generated from the bundle.social OpenAPI spec.
 
 | Action | What it does | Endpoint |
 |---|---|---|
@@ -135,6 +136,7 @@ The post triggers can be narrowed to posts on specific platforms (New Post also 
 | Update Conversation | Sets the inbox status of a conversation to open or archived. | `PATCH /api/v1/conversations/{id}` |
 | Get Comments Usage (Organization) | Retrieves how many comments your organization has used against its plan limit this billing period. | `GET /api/v1/organization/usage/comments` |
 | Get Daily Limits Usage (Organization) | Retrieves how many posts a social account has published on a given day against the network's daily cap. | `GET /api/v1/organization/usage/daily-limits` |
+| Get DM Usage (Organization) | Retrieves how many direct messages and automation runs each Instagram, Facebook and TikTok account has used this calendar month (UTC) against its monthly limits. | `GET /api/v1/organization/usage/messages` |
 | Get Imports Usage (Organization) | Retrieves the post history import usage of each social account, by team or platform. | `GET /api/v1/organization/usage/imports` |
 | Get Organization | Retrieves your bundle.social organization with its plan details. | `GET /api/v1/organization/` |
 | Get Posts Usage (Organization) | Retrieves how many posts your organization has used against its plan limit this billing period. | `GET /api/v1/organization/usage/posts` |
@@ -172,6 +174,8 @@ The post triggers can be narrowed to posts on specific platforms (New Post also 
 | Find Team | Finds a team by ID, with its connected social accounts and settings. | `GET /api/v1/team/{id}` |
 | Get Many Teams | Returns many teams. Paging is handled for you. | `GET /api/v1/team/` |
 | Update Team | Updates a team's name or avatar. Fields left empty keep their current value. | `PATCH /api/v1/team/{id}` |
+| Get Post Settings (TikTok) | Retrieves the privacy levels, comment, Duet and Stitch settings and maximum video length the TikTok account of a team allows. | `GET /api/v1/misc/tiktok/post-settings` |
+| Search Locations (TikTok) | Searches the location tags the TikTok account of a team can add to a post, for Location ID and Location Name in Create Post. | `GET /api/v1/misc/tiktok/locations` |
 | Abort Multipart Upload | Discards an unfinished multipart upload and the parts already sent. | `POST /api/v1/upload/multipart/abort` |
 | Complete Multipart Upload | Assembles the uploaded parts of a multipart upload and adds the file to the media library. | `POST /api/v1/upload/multipart/complete` |
 | Delete Many Uploads | Permanently deletes several media files from the media library at once. | `DELETE /api/v1/upload/` |

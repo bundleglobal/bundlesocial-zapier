@@ -74,6 +74,106 @@ module.exports = [
 		},
 	},
 	{
+		key: 'organization_get_dm_usage',
+		type: 'create',
+		noun: 'Organization',
+		label: 'Get DM Usage (Organization)',
+		description: 'Retrieves how many direct messages and automation runs each Instagram, Facebook and TikTok account has used this calendar month (UTC) against its monthly limits.',
+		operationId: 'organization.getMessagesUsage',
+		inputFields: [
+			{
+				key: 'teamId',
+				label: 'Team',
+				type: 'string',
+				dynamic: 'team_list.id.name',
+				helpText: 'Pick from the list, or map an ID from an earlier step.',
+			},
+			{
+				key: 'socialAccountType',
+				label: 'Social Account Type',
+				type: 'string',
+				choices: [
+					{
+						value: 'INSTAGRAM',
+						label: 'Instagram',
+						sample: 'INSTAGRAM',
+					},
+					{
+						value: 'FACEBOOK',
+						label: 'Facebook',
+						sample: 'FACEBOOK',
+					},
+					{
+						value: 'TIKTOK',
+						label: 'TikTok',
+						sample: 'TIKTOK',
+					},
+				],
+			},
+			{
+				key: 'socialAccountId',
+				label: 'Social Account',
+				type: 'string',
+				dynamic: 'social_account_list.id.name',
+				helpText: 'Pick from the list, or map an ID from an earlier step.',
+			},
+			{
+				key: 'returnAll',
+				label: 'Return All',
+				type: 'boolean',
+				default: 'false',
+				helpText: 'Return every result instead of stopping at **Limit**.',
+			},
+			{
+				key: 'limit',
+				label: 'Limit',
+				type: 'integer',
+				default: '50',
+				helpText: 'Max number of results to return when **Return All** is off.',
+			},
+		],
+		spec: {
+			method: 'GET',
+			path: '/api/v1/organization/usage/messages',
+			params: [
+				{
+					key: 'teamId',
+					in: 'query',
+					to: 'teamId',
+				},
+				{
+					key: 'socialAccountType',
+					in: 'query',
+					to: 'socialAccountType',
+				},
+				{
+					key: 'socialAccountId',
+					in: 'query',
+					to: 'socialAccountId',
+				},
+			],
+			pagination: {
+				itemsKey: 'items',
+				pageSize: 100,
+			},
+		},
+		sample: {
+			items: [
+				{
+					id: 'c9b1e4a2-5f0d-4e8b-9a3c-1d2e3f4a5b6c',
+					type: 'INSTAGRAM',
+					username: 'Sample username',
+					displayName: 'Sample display name',
+					messagesUsed: 1,
+					messagesLimit: 1,
+					automationRunsUsed: 1,
+					automationRunsLimit: 1,
+				},
+			],
+			total: 1,
+		},
+	},
+	{
 		key: 'organization_get_imports_usage',
 		type: 'create',
 		noun: 'Organization',
