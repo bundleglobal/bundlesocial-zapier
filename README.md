@@ -31,6 +31,8 @@ The key is only ever sent to `https://api.bundle.social`, never to the hosts fil
 - **Upload File** takes files up to 90 MB. **Upload Large File** takes files up to 5 GB: it sends the file straight to storage and adds it to the media library in one step. The *Initialize*, *Finalize* and *Multipart* upload actions expose the individual steps for files above 5 GB or custom flows.
 - **Update Post** shows the settings of every platform: changing **Social Account Types** there changes the platforms of the post, so it does not hide sections. Fields left empty keep their current value.
 - To tag a TikTok location, run **Search Locations (TikTok)** first and map the `locationId` and `name` it returns into the post's **TikTok: Location ID** and **TikTok: Location Name**.
+- To run a TikTok post as a Spark Ad, use **Enable Ad Authorization (TikTok)** and share the returned `authCode` with the advertiser. Pick the post as **Post**, or give **Platform Post ID** (the TikTok item_id) for a post published outside bundle.social, never both. **Get Ad Authorization (TikTok)** shows whether the code is in use or expired.
+- **Threads: Is Ghost Post** makes a text-only Threads post that archives itself after 24 hours; it cannot carry media, a poll, a GIF, a link attachment, a topic tag, reply control, country restrictions or a cross-post to the Instagram story.
 - **Get Post Analytics** takes the **Post ID** together with the **Platform Type** the post went out on.
 - Direct messages and automations are switched on per organization by [bundle.social support](mailto:support@bundle.social); until then their actions fail. Each Instagram or Facebook account also needs **Enable Messaging (Social Account)** before it receives DMs.
 - **Send Message (Conversation)** only works within 24 hours of the participant's last message, which is Meta's rule. To answer a comment with a DM, use **Send Private Reply (Conversation)**: one text-only reply per comment.
@@ -85,7 +87,7 @@ The post triggers can be narrowed to posts on specific platforms (New Post also 
 
 <!-- actions:start -->
 
-100 actions, generated from the bundle.social OpenAPI spec.
+104 actions, generated from the bundle.social OpenAPI spec.
 
 | Action | What it does | Endpoint |
 |---|---|---|
@@ -167,13 +169,17 @@ The post triggers can be narrowed to posts on specific platforms (New Post also 
 | Refresh Channels (Social Account) | Reloads the channels available to a Reddit, Discord, Slack or Pinterest account from the network. | `POST /api/v1/social-account/refresh-channels` |
 | Refresh Profile (Social Account) | Updates the profile name, handle and avatar of a social account from the network. | `POST /api/v1/social-account/profile-refresh` |
 | Run Connection Check (Social Account) | Checks right away whether a social account is still authorized, so an expired connection shows up before a post fails. | `POST /api/v1/social-account/connection-check` |
-| Set Channel (Social Account) | Selects the page, channel or organization a YouTube, Instagram, Facebook or LinkedIn account posts to. | `POST /api/v1/social-account/set-channel` |
+| Set Channel (Social Account) | Selects the page, channel or organization a YouTube, Instagram, Facebook, LinkedIn or Snapchat account posts to. | `POST /api/v1/social-account/set-channel` |
 | Unset Channel (Social Account) | Clears the selected page, channel or organization of a social account, keeping its authorization. | `POST /api/v1/social-account/unset-channel` |
 | Create Team | Creates a new team in your bundle.social organization. | `POST /api/v1/team/` |
 | Delete Team | Permanently deletes a team along with its connected social accounts, posts and uploads. | `DELETE /api/v1/team/{id}` |
 | Find Team | Finds a team by ID, with its connected social accounts and settings. | `GET /api/v1/team/{id}` |
 | Get Many Teams | Returns many teams. Paging is handled for you. | `GET /api/v1/team/` |
 | Update Team | Updates a team's name or avatar. Fields left empty keep their current value. | `PATCH /api/v1/team/{id}` |
+| Disable Ad Authorization (TikTok) | Turns off ad authorization for a TikTok post. TikTok refuses it while the post runs in an active Spark Ad, so pause those ads first. | `DELETE /api/v1/misc/tiktok/ad-authorization` |
+| Enable Ad Authorization (TikTok) | Turns on ad authorization for a public TikTok post and returns its Spark Ads code, which an advertiser adds to their TikTok ad account to run the post as a Spark Ad. | `POST /api/v1/misc/tiktok/ad-authorization` |
+| Extend Ad Authorization (TikTok) | Adds days to the validity of the Spark Ads code of a TikTok post, or issues a new code if the old one was deleted. Ad authorization must already be enabled. | `POST /api/v1/misc/tiktok/ad-authorization/extend` |
+| Get Ad Authorization (TikTok) | Retrieves the Spark Ads code of a TikTok post with its status (not used, in use or expired) and validity window. Fails when ad authorization is not enabled for the post. | `GET /api/v1/misc/tiktok/ad-authorization` |
 | Get Post Settings (TikTok) | Retrieves the privacy levels, comment, Duet and Stitch settings and maximum video length the TikTok account of a team allows. | `GET /api/v1/misc/tiktok/post-settings` |
 | Search Locations (TikTok) | Searches the location tags the TikTok account of a team can add to a post, for Location ID and Location Name in Create Post. | `GET /api/v1/misc/tiktok/locations` |
 | Abort Multipart Upload | Discards an unfinished multipart upload and the parts already sent. | `POST /api/v1/upload/multipart/abort` |

@@ -102,6 +102,27 @@ describe('creates', () => {
 		});
 	});
 
+	it('sends a Threads ghost post flag', async () => {
+		nock(API)
+			.post('/api/v1/post/', (sent) => {
+				expect(sent.data).toEqual({ THREADS: { text: 'Gone tomorrow', isGhostPost: true } });
+				return true;
+			})
+			.reply(200, { id: 'post-3' });
+
+		await appTester(App.creates.post_create.operation.perform, {
+			authData,
+			inputData: {
+				teamId: 'team-1',
+				postDate: '2026-01-15T10:00:00Z',
+				status: 'DRAFT',
+				socialAccountTypes: ['THREADS'],
+				data__THREADS__text: 'Gone tomorrow',
+				data__THREADS__isGhostPost: 'true',
+			},
+		});
+	});
+
 	it('sends the raw body when Specify Body is Using JSON', async () => {
 		nock(API).post('/api/v1/team/', { name: 'From JSON' }).reply(200, { id: 'team-1' });
 
@@ -333,6 +354,79 @@ describe('post actions', () => {
 		});
 
 		expect(result).toEqual({ deleted: 2 });
+	});
+});
+
+describe('TikTok actions', () => {
+	it('enables ad authorization with the validity period as a number', async () => {
+		const code = {
+			platformPostId: '7300000000000000001',
+			authCode: '#code',
+			startsAt: null,
+			expiresAt: null,
+			authorizationDays: 60,
+			status: null,
+		};
+		nock(API)
+			.post('/api/v1/misc/tiktok/ad-authorization', { teamId: 'team-1', postId: 'post-1', authorizationDays: 60 })
+			.reply(200, code);
+
+		const result = await appTester(App.creates.tiktok_enable_ad_authorization.operation.perform, {
+			authData,
+			inputData: { teamId: 'team-1', postId: 'post-1', authorizationDays: '60' },
+		});
+
+		expect(result).toEqual(code);
+	});
+
+	it('extends ad authorization of a post published outside bundle.social', async () => {
+		nock(API)
+			.post('/api/v1/misc/tiktok/ad-authorization/extend', {
+				teamId: 'team-1',
+				platformPostId: '7300000000000000001',
+				authorizationDays: 30,
+			})
+			.reply(200, { authCode: '#code' });
+
+		const result = await appTester(App.creates.tiktok_extend_ad_authorization.operation.perform, {
+			authData,
+			inputData: { teamId: 'team-1', platformPostId: '7300000000000000001', authorizationDays: '30' },
+		});
+
+		expect(result).toEqual({ authCode: '#code' });
+	});
+
+	it('gets the Spark Ads code with the post in the query', async () => {
+		nock(API)
+			.get('/api/v1/misc/tiktok/ad-authorization')
+			.query({ teamId: 'team-1', postId: 'post-1' })
+			.reply(200, { authCode: '#code', status: 'IN_USE' });
+
+		const result = await appTester(App.creates.tiktok_get_ad_authorization.operation.perform, {
+			authData,
+			inputData: { teamId: 'team-1', postId: 'post-1' },
+		});
+
+		expect(result).toEqual({ authCode: '#code', status: 'IN_USE' });
+	});
+
+	it('disables ad authorization with the post in the body', async () => {
+		nock(API)
+			.delete('/api/v1/misc/tiktok/ad-authorization', { teamId: 'team-1', postId: 'post-1' })
+			.reply(200, { success: true });
+
+		const result = await appTester(App.creates.tiktok_disable_ad_authorization.operation.perform, {
+			authData,
+			inputData: { teamId: 'team-1', postId: 'post-1' },
+		});
+
+		expect(result).toEqual({ success: true });
+	});
+
+	it('offers the validity periods in ascending order', () => {
+		const op = require('../generated').find((o) => o.key === 'tiktok_enable_ad_authorization');
+		const field = op.inputFields.find((f) => f.key === 'authorizationDays');
+		expect(field.choices.map((c) => c.value)).toEqual(['7', '30', '60', '180', '365']);
 	});
 });
 

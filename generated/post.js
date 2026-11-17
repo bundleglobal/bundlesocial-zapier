@@ -918,6 +918,15 @@ module.exports = [
 				_platform: 'THREADS',
 			},
 			{
+				key: 'data__THREADS__isGhostPost',
+				label: 'Threads: Is Ghost Post',
+				type: 'boolean',
+				helpText: 'Ghost post: a text-only post that archives itself after 24 hours. Cannot be combined with media (Upload IDs, Media Items), a Poll, a GIF, a Link Attachment, a Topic Tag, Reply Control, Allowlisted Country Codes or Crosspost to Instagram Story.',
+				group: 'data_threads',
+				_body: true,
+				_platform: 'THREADS',
+			},
+			{
 				key: 'data__TIKTOK__type',
 				label: 'TikTok: Type',
 				type: 'string',
@@ -2678,6 +2687,14 @@ module.exports = [
 					key: 'data__THREADS__crosspostToInstagramStoryDarkMode',
 					in: 'body',
 					to: 'data.THREADS.crosspostToInstagramStoryDarkMode',
+					shape: {
+						kind: 'boolean',
+					},
+				},
+				{
+					key: 'data__THREADS__isGhostPost',
+					in: 'body',
+					to: 'data.THREADS.isGhostPost',
 					shape: {
 						kind: 'boolean',
 					},
@@ -4968,6 +4985,14 @@ module.exports = [
 				_body: true,
 			},
 			{
+				key: 'data__THREADS__isGhostPost',
+				label: 'Threads: Is Ghost Post',
+				type: 'boolean',
+				helpText: 'Ghost post: a text-only post that archives itself after 24 hours. Cannot be combined with media (Upload IDs, Media Items), a Poll, a GIF, a Link Attachment, a Topic Tag, Reply Control, Allowlisted Country Codes or Crosspost to Instagram Story.',
+				group: 'data_threads',
+				_body: true,
+			},
+			{
 				key: 'data__TIKTOK__type',
 				label: 'TikTok: Type',
 				type: 'string',
@@ -6615,6 +6640,14 @@ module.exports = [
 					key: 'data__THREADS__crosspostToInstagramStoryDarkMode',
 					in: 'body',
 					to: 'data.THREADS.crosspostToInstagramStoryDarkMode',
+					shape: {
+						kind: 'boolean',
+					},
+				},
+				{
+					key: 'data__THREADS__isGhostPost',
+					in: 'body',
+					to: 'data.THREADS.isGhostPost',
 					shape: {
 						kind: 'boolean',
 					},

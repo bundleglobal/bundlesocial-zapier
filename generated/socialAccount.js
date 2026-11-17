@@ -179,6 +179,25 @@ module.exports = [
 				_body: true,
 			},
 			{
+				key: 'snapchatConnectionMethod',
+				label: 'Snapchat Connection Method',
+				type: 'string',
+				choices: [
+					{
+						value: 'PERSONAL',
+						label: 'Personal',
+						sample: 'PERSONAL',
+					},
+					{
+						value: 'BUSINESS',
+						label: 'Business',
+						sample: 'BUSINESS',
+					},
+				],
+				helpText: 'Snapchat only. PERSONAL (default) connects the login\'s own Public Profile. BUSINESS lists the Public Profiles of the login\'s Snap Business organizations; pick one with set-channel.',
+				_body: true,
+			},
+			{
 				key: 'withBusinessScope',
 				label: 'With Business Scope',
 				type: 'boolean',
@@ -256,6 +275,11 @@ module.exports = [
 					key: 'instagramConnectionMethod',
 					in: 'body',
 					to: 'instagramConnectionMethod',
+				},
+				{
+					key: 'snapchatConnectionMethod',
+					in: 'body',
+					to: 'snapchatConnectionMethod',
 				},
 				{
 					key: 'withBusinessScope',
@@ -425,7 +449,7 @@ module.exports = [
 				key: 'resetChannel',
 				label: 'Reset Channel',
 				type: 'boolean',
-				helpText: 'If you set that to true, selected page will not be transferred automatically. The user will have to select the page themselves again. This only applies to Facebook, Instagram, Linkedin and Youtube.',
+				helpText: 'If you set that to true, selected page will not be transferred automatically. The user will have to select the page themselves again. This only applies to Facebook, Instagram, Linkedin, Youtube, Google Business and Snapchat connected with the BUSINESS method.',
 				_body: true,
 			},
 		],
@@ -659,6 +683,25 @@ module.exports = [
 				_body: true,
 			},
 			{
+				key: 'snapchatConnectionMethod',
+				label: 'Snapchat Connection Method',
+				type: 'string',
+				choices: [
+					{
+						value: 'PERSONAL',
+						label: 'Personal',
+						sample: 'PERSONAL',
+					},
+					{
+						value: 'BUSINESS',
+						label: 'Business',
+						sample: 'BUSINESS',
+					},
+				],
+				helpText: 'Snapchat only - connection method. When omitted, the portal lets the user choose.',
+				_body: true,
+			},
+			{
 				key: 'withBusinessScope',
 				label: 'With Business Scope',
 				type: 'boolean',
@@ -802,6 +845,11 @@ module.exports = [
 						sample: 'nl',
 					},
 					{
+						value: 'no',
+						label: 'No',
+						sample: 'no',
+					},
+					{
 						value: 'pl',
 						label: 'Pl',
 						sample: 'pl',
@@ -906,6 +954,11 @@ module.exports = [
 					key: 'instagramConnectionMethod',
 					in: 'body',
 					to: 'instagramConnectionMethod',
+				},
+				{
+					key: 'snapchatConnectionMethod',
+					in: 'body',
+					to: 'snapchatConnectionMethod',
 				},
 				{
 					key: 'withBusinessScope',
@@ -1602,6 +1655,11 @@ module.exports = [
 						sample: 'SLACK',
 					},
 					{
+						value: 'SNAPCHAT',
+						label: 'Snapchat',
+						sample: 'SNAPCHAT',
+					},
+					{
 						value: 'YOUTUBE',
 						label: 'YouTube',
 						sample: 'YOUTUBE',
@@ -1969,7 +2027,7 @@ module.exports = [
 		type: 'create',
 		noun: 'Social Account',
 		label: 'Set Channel (Social Account)',
-		description: 'Selects the page, channel or organization a YouTube, Instagram, Facebook or LinkedIn account posts to.',
+		description: 'Selects the page, channel or organization a YouTube, Instagram, Facebook, LinkedIn or Snapchat account posts to.',
 		operationId: 'socialAccount.setChannel',
 		inputFields: [
 			{
@@ -2017,6 +2075,11 @@ module.exports = [
 						value: 'LINKEDIN',
 						label: 'LinkedIn',
 						sample: 'LINKEDIN',
+					},
+					{
+						value: 'SNAPCHAT',
+						label: 'Snapchat',
+						sample: 'SNAPCHAT',
 					},
 					{
 						value: 'YOUTUBE',
@@ -2131,6 +2194,11 @@ module.exports = [
 						value: 'LINKEDIN',
 						label: 'LinkedIn',
 						sample: 'LINKEDIN',
+					},
+					{
+						value: 'SNAPCHAT',
+						label: 'Snapchat',
+						sample: 'SNAPCHAT',
 					},
 					{
 						value: 'YOUTUBE',
