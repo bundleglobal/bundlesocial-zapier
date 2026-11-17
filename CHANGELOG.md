@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.6.0...v1.7.0) (2026-11-17)
+
+
+### Features
+
+* TikTok ad authorization and Threads ghost posts ([#8](https://github.com/bundleglobal/bundlesocial-zapier/issues/8)) ([afce44c](https://github.com/bundleglobal/bundlesocial-zapier/commit/afce44c6711fa8d750d858106c22ef1cf685c0b9))
+
 # [1.6.0](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.5.0...v1.6.0) (2026-11-04)
 
 
