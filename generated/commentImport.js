@@ -584,12 +584,13 @@ module.exports = [
 			{
 				key: 'offset',
 				label: 'Offset',
-				type: 'number',
+				type: 'integer',
 			},
 			{
 				key: 'query_limit',
 				label: 'Limit',
-				type: 'number',
+				type: 'integer',
+				helpText: 'Page size, up to 1000. Default 20.',
 			},
 		],
 		spec: {
