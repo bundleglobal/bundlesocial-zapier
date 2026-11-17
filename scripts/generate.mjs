@@ -60,6 +60,10 @@ const PUBLISHED_OPERATIONS = new Set([
 	'post.reconnectSocialAccount',
 	'misc.tiktok.searchLocations',
 	'misc.tiktok.getPostSettings',
+	'misc.tiktok.getAdAuthorization',
+	'misc.tiktok.enableAdAuthorization',
+	'misc.tiktok.extendAdAuthorization',
+	'misc.tiktok.disableAdAuthorization',
 	'postImport.create',
 	'postImport.getStatus',
 	'postImport.getById',
@@ -146,7 +150,7 @@ const ACTION_DESCRIPTIONS = {
 	'socialAccount.disconnect': 'Disconnects a social account from a team and removes it from all scheduled posts.',
 	'socialAccount.getByType': "Retrieves the team's connected social account on the selected network.",
 	'socialAccount.setChannel':
-		'Selects the page, channel or organization a YouTube, Instagram, Facebook or LinkedIn account posts to.',
+		'Selects the page, channel or organization a YouTube, Instagram, Facebook, LinkedIn or Snapchat account posts to.',
 	'socialAccount.unsetChannel':
 		'Clears the selected page, channel or organization of a social account, keeping its authorization.',
 	'socialAccount.refreshChannels':
@@ -177,6 +181,14 @@ const ACTION_DESCRIPTIONS = {
 		'Searches the location tags the TikTok account of a team can add to a post, for Location ID and Location Name in Create Post.',
 	'misc.tiktok.getPostSettings':
 		'Retrieves the privacy levels, comment, Duet and Stitch settings and maximum video length the TikTok account of a team allows.',
+	'misc.tiktok.getAdAuthorization':
+		'Retrieves the Spark Ads code of a TikTok post with its status (not used, in use or expired) and validity window. Fails when ad authorization is not enabled for the post.',
+	'misc.tiktok.enableAdAuthorization':
+		'Turns on ad authorization for a public TikTok post and returns its Spark Ads code, which an advertiser adds to their TikTok ad account to run the post as a Spark Ad.',
+	'misc.tiktok.extendAdAuthorization':
+		'Adds days to the validity of the Spark Ads code of a TikTok post, or issues a new code if the old one was deleted. Ad authorization must already be enabled.',
+	'misc.tiktok.disableAdAuthorization':
+		'Turns off ad authorization for a TikTok post. TikTok refuses it while the post runs in an active Spark Ad, so pause those ads first.',
 	'postImport.create':
 		'Starts importing the posts a social account published before it was connected, together with their analytics.',
 	'postImport.getStatus': 'Lists the post history imports of a team with their status.',
@@ -427,6 +439,20 @@ const DESCRIPTION_OVERRIDES = {
 			[
 				`post.${op}.data.TIKTOK.locationId`,
 				'Location tag from **Search Locations (TikTok)**. Set together with Location Name.',
+			],
+			[
+				`post.${op}.data.THREADS.isGhostPost`,
+				'Ghost post: a text-only post that archives itself after 24 hours. Cannot be combined with media (Upload IDs, Media Items), a Poll, a GIF, a Link Attachment, a Topic Tag, Reply Control, Allowlisted Country Codes or Crosspost to Instagram Story.',
+			],
+		]),
+	),
+	// The API wants exactly one of the two post identifiers.
+	...Object.fromEntries(
+		['getAdAuthorization', 'enableAdAuthorization', 'extendAdAuthorization', 'disableAdAuthorization'].flatMap((op) => [
+			[`misc.tiktok.${op}.postId`, 'A post published to TikTok through bundle.social. Set either this or Platform Post ID, not both.'],
+			[
+				`misc.tiktok.${op}.platformPostId`,
+				"The TikTok post ID (item_id) of a public post on the team's TikTok account, for posts published outside bundle.social. Set either this or Post, not both.",
 			],
 		]),
 	),
@@ -769,7 +795,8 @@ function choicesFor(values) {
 			seen.add(label);
 			return { value: String(value), label, sample: String(value) };
 		});
-	return sortIfLong(choices, 'label');
+	// Numbers keep the spec's ascending order; sorting their labels as text puts 180 before 30.
+	return values.every((value) => typeof value === 'number') ? choices : sortIfLong(choices, 'label');
 }
 
 // ---------- field builder ----------

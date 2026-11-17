@@ -254,6 +254,11 @@ else
 		run error create social_account_unset_channel "{\"teamId\":\"$TEMP_TEAM\",\"type\":\"LINKEDIN\"}"
 		run error create social_account_enable_messaging "{\"teamId\":\"$TEMP_TEAM\",\"type\":\"INSTAGRAM\"}"
 		run error create social_account_disable_messaging "{\"teamId\":\"$TEMP_TEAM\",\"type\":\"INSTAGRAM\"}"
+		# No TikTok account in the temporary team, so the Spark Ads actions never touch a real post.
+		run error create tiktok_get_ad_authorization "{\"teamId\":\"$TEMP_TEAM\",\"platformPostId\":\"7300000000000000001\"}"
+		run error create tiktok_enable_ad_authorization "{\"teamId\":\"$TEMP_TEAM\",\"platformPostId\":\"7300000000000000001\",\"authorizationDays\":\"30\"}"
+		run error create tiktok_extend_ad_authorization "{\"teamId\":\"$TEMP_TEAM\",\"platformPostId\":\"7300000000000000001\",\"authorizationDays\":\"7\"}"
+		run error create tiktok_disable_ad_authorization "{\"teamId\":\"$TEMP_TEAM\",\"platformPostId\":\"7300000000000000001\"}"
 		# Post actions that could publish or import on a real account run against the empty team or a missing ID.
 		run error create post_reconnect_social_account "{\"teamId\":\"$TEMP_TEAM\",\"type\":\"LINKEDIN\"}"
 		run error create post_history_import_create "{\"teamId\":\"$TEMP_TEAM\",\"socialAccountType\":\"LINKEDIN\",\"count\":10}"
