@@ -1,3 +1,10 @@
+## [1.7.1](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.7.0...v1.7.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* comment import list takes whole-number offset and limit ([#9](https://github.com/bundleglobal/bundlesocial-zapier/issues/9)) ([c1407fb](https://github.com/bundleglobal/bundlesocial-zapier/commit/c1407fba16d6cc2f5cf12d7c4ed5daf7159de98c))
+
 # [1.7.0](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.6.0...v1.7.0) (2026-11-17)
 
 
