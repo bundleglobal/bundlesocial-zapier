@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.7.1...v1.8.0) (2026-11-24)
+
+
+### Features
+
+* YouTube embeddable and Snapchat history import ([#10](https://github.com/bundleglobal/bundlesocial-zapier/issues/10)) ([defb37d](https://github.com/bundleglobal/bundlesocial-zapier/commit/defb37d09344ff4a785bfe45f2d83437fe98c729))
+
 ## [1.7.1](https://github.com/bundleglobal/bundlesocial-zapier/compare/v1.7.0...v1.7.1) (2026-11-18)
 
 
