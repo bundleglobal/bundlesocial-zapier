@@ -1438,6 +1438,15 @@ module.exports = [
 				_platform: 'YOUTUBE',
 			},
 			{
+				key: 'data__YOUTUBE__embeddable',
+				label: 'YouTube: Embeddable',
+				type: 'boolean',
+				helpText: 'Whether other websites can embed the video. When omitted, YouTube\'s own default applies.',
+				group: 'data_youtube',
+				_body: true,
+				_platform: 'YOUTUBE',
+			},
+			{
 				key: 'data__REDDIT__sr',
 				label: 'Reddit: Sr',
 				type: 'string',
@@ -2997,6 +3006,14 @@ module.exports = [
 					key: 'data__YOUTUBE__hasPaidProductPlacement',
 					in: 'body',
 					to: 'data.YOUTUBE.hasPaidProductPlacement',
+					shape: {
+						kind: 'boolean',
+					},
+				},
+				{
+					key: 'data__YOUTUBE__embeddable',
+					in: 'body',
+					to: 'data.YOUTUBE.embeddable',
 					shape: {
 						kind: 'boolean',
 					},
@@ -5458,6 +5475,14 @@ module.exports = [
 				_body: true,
 			},
 			{
+				key: 'data__YOUTUBE__embeddable',
+				label: 'YouTube: Embeddable',
+				type: 'boolean',
+				helpText: 'Whether other websites can embed the video. When omitted, YouTube\'s own default applies.',
+				group: 'data_youtube',
+				_body: true,
+			},
+			{
 				key: 'data__REDDIT__sr',
 				label: 'Reddit: Sr',
 				type: 'string',
@@ -6950,6 +6975,14 @@ module.exports = [
 					key: 'data__YOUTUBE__hasPaidProductPlacement',
 					in: 'body',
 					to: 'data.YOUTUBE.hasPaidProductPlacement',
+					shape: {
+						kind: 'boolean',
+					},
+				},
+				{
+					key: 'data__YOUTUBE__embeddable',
+					in: 'body',
+					to: 'data.YOUTUBE.embeddable',
 					shape: {
 						kind: 'boolean',
 					},
