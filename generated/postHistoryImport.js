@@ -79,6 +79,11 @@ module.exports = [
 						sample: 'REDDIT',
 					},
 					{
+						value: 'SNAPCHAT',
+						label: 'Snapchat',
+						sample: 'SNAPCHAT',
+					},
+					{
 						value: 'THREADS',
 						label: 'Threads',
 						sample: 'THREADS',
@@ -426,6 +431,11 @@ module.exports = [
 						sample: 'REDDIT',
 					},
 					{
+						value: 'SNAPCHAT',
+						label: 'Snapchat',
+						sample: 'SNAPCHAT',
+					},
+					{
 						value: 'THREADS',
 						label: 'Threads',
 						sample: 'THREADS',
@@ -541,6 +551,11 @@ module.exports = [
 						value: 'REDDIT',
 						label: 'Reddit',
 						sample: 'REDDIT',
+					},
+					{
+						value: 'SNAPCHAT',
+						label: 'Snapchat',
+						sample: 'SNAPCHAT',
 					},
 					{
 						value: 'THREADS',
